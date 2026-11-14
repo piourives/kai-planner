@@ -1,0 +1,178 @@
+// ============================================================
+//  KAI Planner — arquivo principal
+//  Monta a barra do topo, a barra lateral, o login e troca
+//  de tela conforme o endereço (#/inicio, #/escola, ...).
+// ============================================================
+import * as db from './db.js';
+import { icon } from './icons.js';
+import { esc } from './util.js';
+import { renderInicio } from './views/inicio.js';
+import { renderConfig } from './views/config.js';
+import { renderSoon } from './views/soon.js';
+
+const app = document.getElementById('app');
+
+const ROUTES = {
+  inicio:     { label: 'Início',     icon: 'home',     render: renderInicio },
+  calendario: { label: 'Calendário', icon: 'calendar', render: m => renderSoon(m, 'Calendário', 4) },
+  escola:     { label: 'Escola',     icon: 'school',   render: m => renderSoon(m, 'Escola', 2) },
+  academia:   { label: 'Academia',   icon: 'dumbbell', render: m => renderSoon(m, 'Academia', 3) },
+  futuro:     { label: 'Futuro',     icon: 'star',     render: m => renderSoon(m, 'Futuro', 5) },
+  config:     { label: 'Configurações', icon: 'settings', render: renderConfig },
+};
+const MAIN_NAV = ['inicio', 'calendario', 'escola', 'academia', 'futuro'];
+
+function currentRoute() {
+  const r = location.hash.replace(/^#\/?/, '');
+  return ROUTES[r] ? r : 'inicio';
+}
+
+// ---------- Barra lateral aberta/fechada ----------
+const isMobile = () => matchMedia('(max-width: 860px)').matches;
+function initSidebarState() {
+  const saved = localStorage.getItem('kai:side');
+  const closed = isMobile() ? true : saved === 'closed';
+  document.body.classList.toggle('side-closed', closed);
+}
+function toggleSidebar(force) {
+  const closed = force ?? !document.body.classList.contains('side-closed');
+  document.body.classList.toggle('side-closed', closed);
+  if (!isMobile()) localStorage.setItem('kai:side', closed ? 'closed' : 'open');
+}
+
+// ---------- Estrutura da tela ----------
+function renderShell() {
+  const name = db.getName();
+  const navLink = key => {
+    const r = ROUTES[key];
+    return `<a class="nav-item" data-route="${key}" href="#/${key}">${icon(r.icon)}<span>${r.label}</span></a>`;
+  };
+  app.innerHTML = `
+    <header class="topbar">
+      <button class="icon-btn" id="menuBtn" aria-label="Abrir/fechar menu">${icon('menu')}</button>
+      <a class="brand" href="#/inicio">${icon('calendar')}<span>KAI Planner</span></a>
+      <div class="top-right">
+        <span class="uname">${esc(name)}</span>
+        <span class="avatar">${esc((name || '?').charAt(0).toUpperCase())}</span>
+        <a class="icon-btn" href="#/config" aria-label="Configurações">${icon('settings')}</a>
+      </div>
+    </header>
+    <div class="layout">
+      <nav class="sidebar" id="sidebar">
+        ${MAIN_NAV.map(navLink).join('')}
+        <div class="nav-spacer"></div>
+        ${navLink('config')}
+      </nav>
+      <div class="backdrop" id="backdrop"></div>
+      <main id="main"></main>
+    </div>`;
+  document.getElementById('menuBtn').onclick = () => toggleSidebar();
+  document.getElementById('backdrop').onclick = () => toggleSidebar(true);
+  document.getElementById('sidebar').addEventListener('click', e => {
+    if (e.target.closest('a') && isMobile()) toggleSidebar(true);
+  });
+}
+
+async function renderRoute() {
+  const key = currentRoute();
+  document.querySelectorAll('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.route === key));
+  const main = document.getElementById('main');
+  try {
+    await ROUTES[key].render(main, { refreshShell: startApp });
+  } catch (err) {
+    console.error(err);
+    main.innerHTML = `<div class="card"><b>Ops, algo deu errado.</b><p class="muted small">${esc(err.message || err)}</p></div>`;
+  }
+  window.scrollTo(0, 0);
+}
+
+// ---------- Login ----------
+function renderAuth() {
+  let mode = 'login';
+  const draw = () => {
+    app.innerHTML = `
+      <div class="auth-wrap"><div class="card auth">
+        <h1>${icon('calendar')} KAI Planner</h1>
+        <p class="muted small">${mode === 'login' ? 'Entre com seu e-mail e senha.' : 'Crie sua conta (só precisa fazer uma vez).'}</p>
+        <form id="authForm">
+          <input class="input" type="email" name="email" placeholder="E-mail" autocomplete="email" required>
+          <input class="input" type="password" name="password" placeholder="Senha (mín. 6 caracteres)"
+            autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required>
+          <button class="btn" type="submit">${mode === 'login' ? 'Entrar' : 'Criar conta'}</button>
+          <div class="msg" id="authMsg"></div>
+        </form>
+        <button class="linkbtn" id="switchMode">${mode === 'login' ? 'Não tenho conta — criar' : 'Já tenho conta — entrar'}</button>
+      </div></div>`;
+    document.getElementById('switchMode').onclick = () => { mode = mode === 'login' ? 'signup' : 'login'; draw(); };
+    document.getElementById('authForm').onsubmit = async e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const msg = document.getElementById('authMsg');
+      const btn = e.target.querySelector('button');
+      btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Aguarde…';
+      try {
+        if (mode === 'login') {
+          await db.signIn(fd.get('email'), fd.get('password'));
+          startApp();
+        } else {
+          const logged = await db.signUp(fd.get('email'), fd.get('password'));
+          if (logged) startApp();
+          else { msg.className = 'msg ok'; msg.textContent = 'Conta criada! Abra seu e-mail, clique no link de confirmação e depois entre aqui.'; }
+        }
+      } catch (err) {
+        msg.className = 'msg err';
+        msg.textContent = traduzErro(err.message);
+      } finally { btn.disabled = false; }
+    };
+  };
+  draw();
+}
+
+function traduzErro(m = '') {
+  if (/Invalid login/i.test(m)) return 'E-mail ou senha incorretos.';
+  if (/Email not confirmed/i.test(m)) return 'Confirme seu e-mail primeiro (veja sua caixa de entrada).';
+  if (/already registered/i.test(m)) return 'Esse e-mail já tem conta. Use "entrar".';
+  if (/Password/i.test(m)) return 'A senha precisa ter pelo menos 6 caracteres.';
+  return m || 'Não foi possível. Tente de novo.';
+}
+
+// ---------- Pergunta o nome na primeira vez ----------
+function askName() {
+  return new Promise(resolve => {
+    const d = document.createElement('dialog');
+    d.innerHTML = `<h3>Como você quer ser chamado?</h3>
+      <form method="dialog"><input class="input" name="n" maxlength="30" required placeholder="Seu nome ou apelido">
+      <div class="actions"><button class="btn">Salvar</button></div></form>`;
+    document.body.appendChild(d);
+    d.querySelector('form').onsubmit = async e => {
+      e.preventDefault();
+      await db.setName(d.querySelector('input').value.trim());
+      d.close(); d.remove(); resolve();
+    };
+    d.addEventListener('cancel', e => e.preventDefault());
+    d.showModal();
+  });
+}
+
+// ---------- Início do app ----------
+async function startApp() {
+  if (db.isCloud() && !db.currentUser()) { renderAuth(); return; }
+  if (!db.getName()) await askName();
+  renderShell();
+  initSidebarState();
+  renderRoute();
+}
+
+window.addEventListener('hashchange', () => { if (document.getElementById('main')) renderRoute(); });
+
+(async () => {
+  try { await db.initDB(); }
+  catch (e) { app.innerHTML = `<div class="boot">Não consegui conectar ao Supabase. Verifique a internet e o config.js.</div>`; return; }
+  startApp();
+})();
+
+// Service worker: só para deixar o app instalável e abrir rápido.
+// (Não usamos notificações de forma nenhuma.)
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}

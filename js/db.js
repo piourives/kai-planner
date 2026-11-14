@@ -1,0 +1,144 @@
+// ============================================================
+//  Camada de dados
+//  - Se o config.js tiver URL e chave: usa o Supabase (nuvem,
+//    sincroniza celular e computador, com login).
+//  - Se não tiver: "modo local", salva só neste navegador.
+//  As telas usam sempre as mesmas funções (list, insert, ...),
+//  então não precisam saber qual modo está ativo.
+// ============================================================
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
+
+let supa = null;
+let user = null;
+
+export const isCloud = () => !!supa;
+export const currentUser = () => user;
+
+export async function initDB() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm');
+  supa = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true },
+  });
+  const { data } = await supa.auth.getSession();
+  user = data.session?.user ?? null;
+  supa.auth.onAuthStateChange((_evt, session) => { user = session?.user ?? null; });
+}
+
+// ---------- Login ----------
+export async function signIn(email, password) {
+  const { error } = await supa.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  const { data } = await supa.auth.getSession();
+  user = data.session?.user ?? null;
+}
+export async function signUp(email, password) {
+  const { data, error } = await supa.auth.signUp({ email, password });
+  if (error) throw error;
+  user = data.session?.user ?? null;
+  return !!data.session; // false = precisa confirmar o e-mail
+}
+export async function signOut() {
+  if (supa) await supa.auth.signOut();
+  user = null;
+}
+
+// ---------- Perfil (nome) ----------
+// O nome NÃO fica no código: fica na sua conta (ou no navegador, no modo local).
+export function getName() {
+  if (supa) return user?.user_metadata?.name || '';
+  return localStorage.getItem('kai:name') || '';
+}
+export async function setName(name) {
+  if (supa) {
+    const { data, error } = await supa.auth.updateUser({ data: { name } });
+    if (error) throw error;
+    user = data.user;
+  } else {
+    localStorage.setItem('kai:name', name);
+  }
+}
+
+// ---------- Operações nas tabelas ----------
+// filtros: { eq:{campo:valor}, gte:{}, lte:{}, lt:{}, in:{campo:[...]}, order:'campo', asc:true }
+
+function localLoad(table) {
+  try { return JSON.parse(localStorage.getItem('kai:' + table) || '[]'); } catch { return []; }
+}
+function localSave(table, rows) { localStorage.setItem('kai:' + table, JSON.stringify(rows)); }
+
+function localMatch(r, f = {}) {
+  for (const [k, v] of Object.entries(f.eq || {})) if (r[k] !== v) return false;
+  for (const [k, v] of Object.entries(f.gte || {})) if (!(r[k] >= v)) return false;
+  for (const [k, v] of Object.entries(f.lte || {})) if (!(r[k] <= v)) return false;
+  for (const [k, v] of Object.entries(f.lt || {})) if (!(r[k] < v)) return false;
+  for (const [k, v] of Object.entries(f.in || {})) if (!v.includes(r[k])) return false;
+  return true;
+}
+
+export async function list(table, f = {}) {
+  if (supa) {
+    let q = supa.from(table).select('*');
+    for (const [k, v] of Object.entries(f.eq || {})) q = q.eq(k, v);
+    for (const [k, v] of Object.entries(f.gte || {})) q = q.gte(k, v);
+    for (const [k, v] of Object.entries(f.lte || {})) q = q.lte(k, v);
+    for (const [k, v] of Object.entries(f.lt || {})) q = q.lt(k, v);
+    for (const [k, v] of Object.entries(f.in || {})) q = q.in(k, v);
+    if (f.order) q = q.order(f.order, { ascending: f.asc !== false });
+    const { data, error } = await q;
+    if (error) throw error;
+    return data;
+  }
+  let rows = localLoad(table).filter(r => localMatch(r, f));
+  if (f.order) {
+    const dir = f.asc === false ? -1 : 1;
+    rows.sort((a, b) => (a[f.order] > b[f.order] ? dir : a[f.order] < b[f.order] ? -dir : 0));
+  }
+  return rows;
+}
+
+export async function insert(table, row) {
+  if (supa) {
+    const { data, error } = await supa.from(table).insert({ ...row, user_id: user.id }).select().single();
+    if (error) throw error;
+    return data;
+  }
+  const rows = localLoad(table);
+  const r = { id: crypto.randomUUID(), created_at: new Date().toISOString(), ...row };
+  rows.push(r); localSave(table, rows);
+  return r;
+}
+
+export async function update(table, id, patch) {
+  if (supa) {
+    const { error } = await supa.from(table).update(patch).eq('id', id);
+    if (error) throw error;
+    return;
+  }
+  const rows = localLoad(table).map(r => (r.id === id ? { ...r, ...patch } : r));
+  localSave(table, rows);
+}
+
+export async function remove(table, id) {
+  if (supa) {
+    const { error } = await supa.from(table).delete().eq('id', id);
+    if (error) throw error;
+    return;
+  }
+  localSave(table, localLoad(table).filter(r => r.id !== id));
+}
+
+// Cria ou atualiza a linha que tem os mesmos valores nas colunas "keys".
+export async function upsert(table, row, keys) {
+  if (supa) {
+    const { error } = await supa.from(table)
+      .upsert({ ...row, user_id: user.id }, { onConflict: ['user_id', ...keys].join(',') });
+    if (error) throw error;
+    return;
+  }
+  const rows = localLoad(table);
+  const i = rows.findIndex(r => keys.every(k => r[k] === row[k]));
+  if (i >= 0) rows[i] = { ...rows[i], ...row };
+  else rows.push({ id: crypto.randomUUID(), created_at: new Date().toISOString(), ...row });
+  localSave(table, rows);
+}
