@@ -23,6 +23,13 @@ const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 let importItems = null; // itens do Importar aguardando revisão
 
+// O bloco cai no horário do treino num dia de treino?
+function clashTraining(b) {
+  if (!isTrainingDay(b.date)) return false;
+  const t = getSetting('routine').training;
+  return b.start_time < t.to && b.end_time > t.from;
+}
+
 export async function renderEscola(main, ctx, params = []) {
   if (params[0] === 'p' && params[1]) return renderDetail(main, params[1]);
   const tab = TABS.some(t => t.key === params[0]) ? params[0] : 'prazos';
@@ -241,7 +248,7 @@ async function renderDetail(main, id) {
         <span class="right counter">${blocks.filter(b => b.done).length}/${blocks.length}</span></div>
       ${blocks.map(b => `<div class="check-row ${b.done ? 'done' : ''}" data-block="${b.id}">
         <button class="cb ${b.done ? 'on' : ''}" data-act="done">${icon('check')}</button>
-        <span class="t">${fmtShort(b.date)} · ${b.start_time}–${b.end_time}${isTrainingDay(b.date) ? ' <span class="tag">dia de treino</span>' : ''}</span>
+        <span class="t">${fmtShort(b.date)} · ${b.start_time}–${b.end_time}${clashTraining(b) ? ' <span class="tag tag-red">choca com o treino</span>' : ''}</span>
         <span class="row-actions" style="opacity:1">
           <button data-act="move" title="Mover">${icon('calendar')}</button>
           <button data-act="del" title="Apagar">${icon('trash')}</button></span></div>`).join('')

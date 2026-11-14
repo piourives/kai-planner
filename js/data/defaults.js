@@ -95,9 +95,71 @@ export const STATUS = {
 
 export const PASS_PCT = 70;
 
-// Dia em que foi feito um Treino A (base da sequência dia sim / dia não).
-// Na Fase 3 isso passa a ser calculado pelos treinos que você marcar.
+// Primeiro treino registrado (Treino A). A sequência continua a partir
+// dos treinos que você marcar como feitos na tela Academia.
 export const TRAINING_ANCHOR = '2026-11-14';
+// Início do programa de 3 meses
+export const PROGRAM_START = '2026-11-14';
+
+// ---------- Treinos ----------
+// sets/reps: séries e repetições · warmup: aquecimento · optional: opcional
+// load: dá pra registrar carga · swaps: trocas possíveis · fromMonth: aparece a partir do mês X
+export const WORKOUTS = {
+  A: {
+    name: 'Cardio', place: 'em casa', exercises: [
+      { key: 'a_aq', name: 'Aquecimento: caminhada', reps: '5 min', warmup: true },
+      { key: 'a_poli', name: 'Polichinelo', sets: 2, reps: '20s' },
+      { key: 'a_corr', name: 'Corrida parada', sets: 2, reps: '25s' },
+      { key: 'a_mc', name: 'Mountain climber lento', sets: 2, reps: '15s' },
+      { key: 'a_joel', name: 'Elevação de joelhos', sets: 2, reps: '20s' },
+      { key: 'a_cam', name: 'Caminhada no lugar', sets: 2, reps: '60s' },
+      { key: 'a_final', name: 'Cardio final: corrida na rua', reps: '8–10 min',
+        swaps: ['Cardio em casa (se chover): polichinelo + corrida parada', 'Caminhada rápida na rua'] },
+      { key: 'a_burp', name: 'Burpee modificado', sets: 2, reps: '4', optional: true },
+    ],
+  },
+  B: {
+    name: 'Força', place: 'academia do prédio', exercises: [
+      { key: 'b_aq', name: 'Aquecimento: bicicleta', reps: '5 min', warmup: true,
+        swaps: ['Aquecimento: caminhada leve', 'Aquecimento: polichinelo leve'] },
+      { key: 'b_agach', name: 'Agachamento com halter', sets: 2, reps: '10', load: true },
+      { key: 'b_sup', name: 'Supino com halteres', sets: 2, reps: '10', load: true },
+      { key: 'b_rem', name: 'Remada unilateral com halter', sets: 2, reps: '10 por braço', load: true },
+      { key: 'b_dev', name: 'Desenvolvimento de ombros com halteres', sets: 2, reps: '10', load: true },
+      { key: 'b_rosca', name: 'Rosca bíceps com halteres', sets: 2, reps: '10', load: true },
+      { key: 'b_quad', name: 'Elevação de quadril', sets: 2, reps: '12', load: true },
+    ],
+  },
+  C: {
+    name: 'Calistenia', place: 'academia do prédio', exercises: [
+      { key: 'c_aq', name: 'Aquecimento: caminhada leve', reps: '5 min', warmup: true },
+      { key: 'c_flex', name: 'Flexão inclinada no banco', sets: 2, reps: '5–8', load: true },
+      { key: 'c_rem', name: 'Remada com elástico', sets: 2, reps: '12', load: true },
+      { key: 'c_pux', name: 'Puxada com elástico', sets: 2, reps: '12', load: true },
+      { key: 'c_tri', name: 'Tríceps com elástico', sets: 2, reps: '12', load: true },
+      { key: 'c_ponte', name: 'Ponte de glúteos', sets: 2, reps: '12' },
+      { key: 'c_dead', name: 'Dead bug', sets: 2, reps: '8 por lado' },
+      { key: 'c_prancha', name: 'Prancha', sets: 2, reps: '15–20s' },
+      { key: 'c_barra', name: 'Barra fixa assistida (com elástico)', sets: 2, reps: '3–5', optional: true, fromMonth: 3, load: true },
+    ],
+  },
+};
+
+// Progressão de 3 meses
+export const PROGRESSION = [
+  { month: 1, weeks: '1–4', text: 'Aprender os movimentos: 2 séries, cargas leves, foco na técnica da flexão.' },
+  { month: 2, weeks: '5–8', text: '3 séries quando estiver pronto, evoluir as flexões inclinadas, condicionamento e costas.' },
+  { month: 3, weeks: '9–12', text: 'Até 3 séries nos principais, progredir nas flexões, começar a barra fixa assistida, mais resistência.' },
+];
+
+export const TRAINING_RULES = [
+  'Descansar 60–90 s entre as séries',
+  'Aquecer 5–8 min antes',
+  'Nunca treinar até a exaustão',
+  'Priorizar a execução correta',
+  'Descansar nos dias sem treino',
+  'Dormir 8–10 horas',
+];
 
 export const DEFAULTS = {
   subjects: SUBJECTS,
@@ -106,4 +168,7 @@ export const DEFAULTS = {
   study_rules: STUDY_RULES,
   pass_pct: PASS_PCT,
   training_anchor: TRAINING_ANCHOR,
+  program_start: PROGRAM_START,
+  workouts: WORKOUTS,
+  sets3: { A: false, B: false, C: false },
 };

@@ -11,6 +11,8 @@ import { renderConfig } from './views/config.js';
 import { renderSoon } from './views/soon.js';
 import { renderEscola } from './views/escola.js';
 import { loadSettings } from './settings.js';
+import { renderAcademia } from './views/academia.js';
+import { loadTraining } from './training.js';
 
 const app = document.getElementById('app');
 
@@ -18,7 +20,7 @@ const ROUTES = {
   inicio:     { label: 'Início',     icon: 'home',     render: renderInicio },
   calendario: { label: 'Calendário', icon: 'calendar', render: m => renderSoon(m, 'Calendário', 4) },
   escola:     { label: 'Escola',     icon: 'school',   render: renderEscola },
-  academia:   { label: 'Academia',   icon: 'dumbbell', render: m => renderSoon(m, 'Academia', 3) },
+  academia:   { label: 'Academia',   icon: 'dumbbell', render: renderAcademia },
   futuro:     { label: 'Futuro',     icon: 'star',     render: m => renderSoon(m, 'Futuro', 5) },
   config:     { label: 'Configurações', icon: 'settings', render: renderConfig },
 };
@@ -165,6 +167,7 @@ async function startApp() {
   if (db.isCloud() && !db.currentUser()) { renderAuth(); return; }
   if (!db.getName()) await askName();
   await loadSettings(true);
+  await loadTraining();
   renderShell();
   initSidebarState();
   renderRoute();

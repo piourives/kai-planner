@@ -9,6 +9,8 @@ import { esc, todayISO, addDays, diffDays, weekdayShort, parseISO, fmtLong, fmtS
 import { subj, subjName } from '../settings.js';
 import { openStudyBlock } from '../study.js';
 import { addEventDialog } from './escola.js';
+import { plan as trainingPlan, streak as trainingStreak } from '../training.js';
+import { getSetting } from '../settings.js';
 
 // Áreas e tipos de compromisso (cores por tipo no calendário)
 export const AREAS = {
@@ -124,14 +126,16 @@ export async function renderInicio(main) {
   const flame = n => `<span class="streak">${icon('flame')} ${n} ${n === 1 ? 'dia' : 'dias'}</span>`;
 
   const blocosHoje = events.filter(e => e.kind === 'estudo' && e.date === today);
+  const treinoHoje = trainingPlan(1)[0];
   const ringsHtml = HABITS.map(h => {
     const target = h.target || 1;
-    const v = val(h.key);
+    // Treinar: marca sozinho quando o treino do dia é concluído; descanso não conta como falha
+    const v = h.auto ? (treinoHoje.type === 'done' ? 1 : 0) : val(h.key);
     const pct = Math.min(v / target, 1);
     const C = 2 * Math.PI * 27;
-    const s = streakOf(doneSet(h.key, target));
+    const s = h.auto ? trainingStreak() : streakOf(doneSet(h.key, target));
     return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-      <button class="ring" data-habit="${h.key}" ${h.auto ? 'disabled title="Marca sozinho quando você concluir o treino (Fase 3)"' : ''}>
+      <button class="ring" data-habit="${h.key}" ${h.auto ? 'data-go="academia" title="Marca sozinho quando você concluir o treino"' : ''}>
         <span class="circle">
           <svg class="r" viewBox="0 0 62 62"><circle cx="31" cy="31" r="27" fill="none" stroke="#262626" stroke-width="4"/>
             <circle cx="31" cy="31" r="27" fill="none" stroke="${h.color}" stroke-width="4" stroke-linecap="round"
@@ -139,9 +143,9 @@ export async function renderInicio(main) {
           <span class="ic" style="color:${pct >= 1 ? h.color : 'var(--text)'}">${icon(h.icon)}</span>
         </span>
         <span class="name">${h.name}</span>
-        ${h.target ? `<span class="small muted">${v}/${target} copos</span>` : h.auto ? '<span class="small muted">automático</span>'
+        ${h.target ? `<span class="small muted">${v}/${target} copos</span>` : h.auto ? `<span class="small muted">${treinoHoje.type === 'rest' ? 'descanso' : treinoHoje.type === 'done' ? `Treino ${treinoHoje.workout} ✓` : `Treino ${treinoHoje.workout} hoje`}</span>`
           : h.key === 'estudar' && blocosHoje.length ? `<span class="small muted">blocos ${blocosHoje.filter(b => b.done).length}/${blocosHoje.length}</span>` : ''}
-        ${flame(s)}
+        ${h.auto ? `<span class="streak">${icon('flame')} ${s} ${s === 1 ? 'treino' : 'treinos'}</span>` : flame(s)}
       </button>
       ${h.target ? `<span class="water-ctl"><button data-water="-1" aria-label="Tirar um copo">−</button><button data-water="1" aria-label="Mais um copo">+</button></span>` : ''}
     </div>`;
@@ -161,8 +165,15 @@ export async function renderInicio(main) {
 
   // ---------- Agenda deslizável (próximos 7 dias) ----------
   const days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
+  const treinos = trainingPlan(7);
+  const tFrom = getSetting('routine').training.from;
   const paneHtml = view => days.map(d => {
     const items = [];
+    const tr = treinos.find(t => t.date === d);
+    if ((view === 'tudo' || view === 'academia') && tr && tr.type !== 'rest') {
+      items.push(`<a class="ag-item ${tr.type === 'done' ? 'ag-done' : ''}" href="#/academia"><span class="dot" style="background:${AREAS.academia.color}"></span><span class="muted small">${tFrom}</span> Treino ${tr.workout}</a>`);
+    }
+    if (view === 'academia' && tr && tr.type === 'rest') items.push('<span class="ag-none">descanso</span>');
     if (view === 'tudo') {
       weekTasks.filter(t => t.date === d && !t.done)
         .forEach(t => items.push(`<div class="ag-item" style="cursor:default"><span class="dot" style="background:#444"></span>${esc(t.title)}</div>`));
@@ -269,6 +280,7 @@ export async function renderInicio(main) {
       await db.upsert('habit_logs', { habit_key: 'agua', date: today, value: v }, ['habit_key', 'date']);
       return reload();
     }
+    if (e.target.closest('[data-go]')) { location.hash = '#/academia'; return; }
     const h = e.target.closest('[data-habit]');
     if (!h || h.disabled) return;
     const key = h.dataset.habit;

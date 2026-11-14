@@ -4,12 +4,13 @@
 //  mais rápido / mostrar a tela mesmo com internet ruim.
 //  NÃO tem notificações, push, lembretes nem sons.
 // ============================================================
-const VERSION = 'kai-v3';
+const VERSION = 'kai-v4';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icons/icon.svg',
   'js/app.js', 'js/db.js', 'js/config.js', 'js/icons.js', 'js/util.js', 'js/ui.js',
   'js/views/inicio.js', 'js/views/config.js', 'js/views/soon.js', 'js/views/escola.js',
   'js/settings.js', 'js/study.js', 'js/importer.js', 'js/data/defaults.js',
+  'js/training.js', 'js/views/academia.js',
 ];
 
 self.addEventListener('install', e => {

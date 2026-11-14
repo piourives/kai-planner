@@ -7,18 +7,15 @@
 import * as db from './db.js';
 import { getSetting, subj, subjName, subjLabel } from './settings.js';
 import { openDialog } from './ui.js';
+import { isTrainingDay } from './training.js';
 import { esc, todayISO, addDays, diffDays, parseISO, fmtShort, fmtLong } from './util.js';
 
 export const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 export const toHM = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 const dow = d => parseISO(d).getDay();
 
-// Dia de treino previsto (dia sim, dia não a partir do último Treino A).
-// Na Fase 3 isso passa a usar os treinos marcados de verdade.
-export function isTrainingDay(date) {
-  const diff = diffDays(getSetting('training_anchor'), date);
-  return ((diff % 2) + 2) % 2 === 0;
-}
+// Dia de treino: vem da sequência real (treinos marcados na Academia)
+export { isTrainingDay };
 
 // Horários livres (em blocos de 30 min) de um dia
 export function freeSlots(date, taken = [], fromMin = null) {
