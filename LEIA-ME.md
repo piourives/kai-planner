@@ -102,7 +102,9 @@ No Supabase:
 
 ## Atualizar o site depois (a cada fase)
 
-Repita o upload: no repositório, **Add file** → **Upload files**, arraste os arquivos
+1. Se a fase trouxer um arquivo novo `supabase/faseN.sql`, rode ele no **SQL Editor** do Supabase
+   (igual ao da Fase 1). Ele só acrescenta coisas; não apaga seus dados.
+2. Repita o upload: no repositório, **Add file** → **Upload files**, arraste os arquivos
 novos/alterados e **Commit changes**. Em 1–2 minutos o site atualiza.
 Se o app instalado não mostrar a novidade, feche e abra de novo.
 

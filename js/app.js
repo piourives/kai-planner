@@ -9,22 +9,25 @@ import { esc } from './util.js';
 import { renderInicio } from './views/inicio.js';
 import { renderConfig } from './views/config.js';
 import { renderSoon } from './views/soon.js';
+import { renderEscola } from './views/escola.js';
+import { loadSettings } from './settings.js';
 
 const app = document.getElementById('app');
 
 const ROUTES = {
   inicio:     { label: 'Início',     icon: 'home',     render: renderInicio },
   calendario: { label: 'Calendário', icon: 'calendar', render: m => renderSoon(m, 'Calendário', 4) },
-  escola:     { label: 'Escola',     icon: 'school',   render: m => renderSoon(m, 'Escola', 2) },
+  escola:     { label: 'Escola',     icon: 'school',   render: renderEscola },
   academia:   { label: 'Academia',   icon: 'dumbbell', render: m => renderSoon(m, 'Academia', 3) },
   futuro:     { label: 'Futuro',     icon: 'star',     render: m => renderSoon(m, 'Futuro', 5) },
   config:     { label: 'Configurações', icon: 'settings', render: renderConfig },
 };
 const MAIN_NAV = ['inicio', 'calendario', 'escola', 'academia', 'futuro'];
 
+// "#/escola/p/123" -> rota "escola", parâmetros ["p", "123"]
 function currentRoute() {
-  const r = location.hash.replace(/^#\/?/, '');
-  return ROUTES[r] ? r : 'inicio';
+  const [r, ...params] = location.hash.replace(/^#\/?/, '').split('/');
+  return ROUTES[r] ? { key: r, params } : { key: 'inicio', params: [] };
 }
 
 // ---------- Barra lateral aberta/fechada ----------
@@ -74,14 +77,17 @@ function renderShell() {
 }
 
 async function renderRoute() {
-  const key = currentRoute();
+  const { key, params } = currentRoute();
   document.querySelectorAll('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.route === key));
   const main = document.getElementById('main');
   try {
-    await ROUTES[key].render(main, { refreshShell: startApp });
+    await ROUTES[key].render(main, { refreshShell: startApp }, params);
   } catch (err) {
     console.error(err);
-    main.innerHTML = `<div class="card"><b>Ops, algo deu errado.</b><p class="muted small">${esc(err.message || err)}</p></div>`;
+    const msg = String(err.message || err);
+    const falta = /does not exist|schema cache|column/i.test(msg)
+      ? '<p class="small">Parece que falta rodar um arquivo SQL novo no Supabase (pasta <code>supabase/</code>, ex: <code>fase2.sql</code>).</p>' : '';
+    main.innerHTML = `<div class="card"><b>Ops, algo deu errado.</b><p class="muted small">${esc(msg)}</p>${falta}</div>`;
   }
   window.scrollTo(0, 0);
 }
@@ -158,6 +164,7 @@ function askName() {
 async function startApp() {
   if (db.isCloud() && !db.currentUser()) { renderAuth(); return; }
   if (!db.getName()) await askName();
+  await loadSettings(true);
   renderShell();
   initSidebarState();
   renderRoute();

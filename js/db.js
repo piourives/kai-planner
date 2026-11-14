@@ -16,6 +16,8 @@ export const currentUser = () => user;
 
 export async function initDB() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+  // Só para testes no computador: http://localhost:5173/?local usa o modo local
+  if (location.hostname === 'localhost' && new URLSearchParams(location.search).has('local')) return;
   const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm');
   supa = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { persistSession: true, autoRefreshToken: true },
@@ -126,6 +128,25 @@ export async function remove(table, id) {
     return;
   }
   localSave(table, localLoad(table).filter(r => r.id !== id));
+}
+
+// ---------- Arquivos (Supabase Storage, pastas privadas) ----------
+// Os arquivos ficam em <bucket>/<id do usuário>/... e só o dono acessa.
+export async function uploadFile(bucket, path, file) {
+  if (!supa) throw new Error('Enviar arquivos precisa do Supabase (não funciona no modo local).');
+  const full = `${user.id}/${path}`;
+  const { error } = await supa.storage.from(bucket).upload(full, file, { contentType: file.type, upsert: false });
+  if (error) throw error;
+  return full;
+}
+export async function fileUrl(bucket, fullPath) {
+  const { data, error } = await supa.storage.from(bucket).createSignedUrl(fullPath, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+export async function removeFile(bucket, fullPath) {
+  if (!supa) return;
+  await supa.storage.from(bucket).remove([fullPath]);
 }
 
 // Cria ou atualiza a linha que tem os mesmos valores nas colunas "keys".

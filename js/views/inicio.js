@@ -6,6 +6,9 @@ import * as db from '../db.js';
 import { icon } from '../icons.js';
 import { openDialog } from '../ui.js';
 import { esc, todayISO, addDays, diffDays, weekdayShort, parseISO, fmtLong, fmtShort, plural } from '../util.js';
+import { subj, subjName } from '../settings.js';
+import { openStudyBlock } from '../study.js';
+import { addEventDialog } from './escola.js';
 
 // Áreas e tipos de compromisso (cores por tipo no calendário)
 export const AREAS = {
@@ -102,10 +105,12 @@ export async function renderInicio(main) {
     const cls = n <= 1 ? 'b-red' : n <= 3 ? 'b-yellow' : 'b-green';
     const lbl = n === 0 ? 'Hoje' : n === 1 ? 'Amanhã' : `${n}d`;
     const k = KINDS[e.kind], c = AREAS[k.area].color;
-    return `<div class="dl">
+    const tag = e.subject ? `<span class="sdot" style="background:${subj(e.subject)?.color || '#555'}"></span>${esc(subjName(e.subject))}` : k.label;
+    const inner = `
       <span class="ico" style="background:#1e1e1e;color:var(--text)">${icon(k.icon)}</span>
-      <span class="info"><div class="when">${fmtShort(e.date)} · ${k.label}</div><div>${esc(e.title)}</div></span>
-      <span class="badge ${cls}">${lbl}</span></div>`;
+      <span class="info"><div class="when">${fmtShort(e.date)} · ${tag}</div><div>${esc(e.title)}</div></span>
+      <span class="badge ${cls}">${lbl}</span>`;
+    return e.subject ? `<a class="dl" href="#/escola/p/${e.id}">${inner}</a>` : `<div class="dl">${inner}</div>`;
   }).join('') : `<div class="empty">Nenhum prazo chegando. Use o “+” da agenda para adicionar.</div>`;
 
   // ---------- Hábitos ----------
@@ -118,6 +123,7 @@ export async function renderInicio(main) {
   };
   const flame = n => `<span class="streak">${icon('flame')} ${n} ${n === 1 ? 'dia' : 'dias'}</span>`;
 
+  const blocosHoje = events.filter(e => e.kind === 'estudo' && e.date === today);
   const ringsHtml = HABITS.map(h => {
     const target = h.target || 1;
     const v = val(h.key);
@@ -133,7 +139,8 @@ export async function renderInicio(main) {
           <span class="ic" style="color:${pct >= 1 ? h.color : 'var(--text)'}">${icon(h.icon)}</span>
         </span>
         <span class="name">${h.name}</span>
-        ${h.target ? `<span class="small muted">${v}/${target} copos</span>` : h.auto ? '<span class="small muted">automático</span>' : ''}
+        ${h.target ? `<span class="small muted">${v}/${target} copos</span>` : h.auto ? '<span class="small muted">automático</span>'
+          : h.key === 'estudar' && blocosHoje.length ? `<span class="small muted">blocos ${blocosHoje.filter(b => b.done).length}/${blocosHoje.length}</span>` : ''}
         ${flame(s)}
       </button>
       ${h.target ? `<span class="water-ctl"><button data-water="-1" aria-label="Tirar um copo">−</button><button data-water="1" aria-label="Mais um copo">+</button></span>` : ''}
@@ -161,9 +168,15 @@ export async function renderInicio(main) {
         .forEach(t => items.push(`<div class="ag-item" style="cursor:default"><span class="dot" style="background:#444"></span>${esc(t.title)}</div>`));
     }
     weekEvents.filter(e => e.date === d && (view === 'tudo' || KINDS[e.kind]?.area === view))
+      .sort((a, b) => (a.start_time || '00').localeCompare(b.start_time || '00'))
       .forEach(e => {
-        const c = AREAS[KINDS[e.kind]?.area || 'pessoal'].color;
-        items.push(`<button class="ag-item" data-event="${e.id}"><span class="dot" style="background:${c}"></span>${esc(e.title)}</button>`);
+        const c = e.subject ? subj(e.subject)?.color || '#555' : AREAS[KINDS[e.kind]?.area || 'pessoal'].color;
+        // bloco de estudo = bolinha vazada (diferente da prova)
+        const dot = e.kind === 'estudo'
+          ? `<span class="dot" style="border:1.5px solid ${c};background:transparent"></span>`
+          : `<span class="dot" style="background:${c}"></span>`;
+        const time = e.start_time ? `<span class="muted small">${e.start_time}</span> ` : '';
+        items.push(`<button class="ag-item ${e.done ? 'ag-done' : ''}" data-event="${e.id}">${dot}${time}${esc(e.title)}</button>`);
       });
     const dd = parseISO(d).getDate();
     return `<div class="agenda-day ${d === today ? 'today' : ''}">
@@ -285,16 +298,22 @@ export async function renderInicio(main) {
   // Adicionar compromisso
   const addEvent = date => {
     const area = VIEWS[viewIndex].key;
-    const defKind = area === 'academia' ? 'treino' : area === 'futuro' ? 'meta' : 'prova';
+    if (area === 'escola') return addEventDialog({ date: date || today });
+    const defKind = area === 'academia' ? 'treino' : area === 'futuro' ? 'meta' : 'escola';
+    const opts = [['escola', 'Prova ou trabalho (Escola)'], ['treino', 'Treino'], ['meta', 'Meta'], ['data', KINDS.data.label]];
     openDialog({
       title: 'Novo compromisso',
       body: `
-        <label>O que é?<input class="input" name="title" required maxlength="120" placeholder="Ex: Prova de Física"></label>
-        <label>Tipo<select class="input" name="kind">${Object.entries(KINDS).map(([k, v]) =>
-          `<option value="${k}" ${k === defKind ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
+        <label>O que é?<input class="input" name="title" required maxlength="120" placeholder="Ex: Viagem, aniversário…"></label>
+        <label>Tipo<select class="input" name="kind">${opts.map(([k, l]) =>
+          `<option value="${k}" ${k === defKind ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <label>Data<input class="input" type="date" name="date" required value="${date || today}"></label>`,
       submitLabel: 'Adicionar',
       onSubmit: async fd => {
+        if (fd.get('kind') === 'escola') {
+          setTimeout(() => addEventDialog({ title: fd.get('title').trim(), date: fd.get('date') }), 0);
+          return;
+        }
         await db.insert('events', { title: fd.get('title').trim(), kind: fd.get('kind'), date: fd.get('date') });
         reload();
       },
@@ -308,6 +327,8 @@ export async function renderInicio(main) {
     if (!ev) return;
     const item = events.find(x => x.id === ev.dataset.event);
     if (!item) return;
+    if (item.kind === 'estudo') return openStudyBlock(item, reload);
+    if (item.subject && ['prova', 'trabalho'].includes(item.kind)) { location.hash = `#/escola/p/${item.id}`; return; }
     openDialog({
       title: esc(item.title),
       body: `<p class="muted" style="margin:0">${KINDS[item.kind]?.label || ''} · ${fmtLong(item.date)}</p>`,
