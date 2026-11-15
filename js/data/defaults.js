@@ -161,6 +161,21 @@ export const TRAINING_RULES = [
   'Dormir 8–10 horas',
 ];
 
+// Hábitos do Início (anéis) — dá pra editar nas Configurações.
+// auto: marca sozinho (Treinar vem da Academia) · target > 1: contador (ex: copos de água)
+export const HABITS = [
+  { key: 'treinar', name: 'Treinar',      icon: 'dumbbell', auto: true },
+  { key: 'estudar', name: 'Estudar 1h30', icon: 'school' },
+  { key: 'agua',    name: 'Água 2L',      icon: 'droplet', target: 8, unit: 'copos' },
+  { key: 'dormir',  name: 'Dormir 8h',    icon: 'moon' },
+];
+// Bloco "Rotina" (checklist) — optional: não conta para a sequência
+export const ROTINA = [
+  { key: 'mesa',   name: 'Mesa organizada' },
+  { key: 'quarto', name: 'Quarto organizado', optional: true },
+  { key: 'oracao', name: 'Rezar o Pai Nosso à noite' },
+];
+
 export const DEFAULTS = {
   subjects: SUBJECTS,
   timetable: TIMETABLE,
@@ -171,4 +186,8 @@ export const DEFAULTS = {
   program_start: PROGRAM_START,
   workouts: WORKOUTS,
   sets3: { A: false, B: false, C: false },
+  habits: HABITS,
+  rotina: ROTINA,
+  theme: 'escuro',
+  text_size: 'normal',
 };

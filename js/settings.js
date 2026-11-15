@@ -22,6 +22,14 @@ export function getSetting(key) {
   return cache?.[key] ?? DEFAULTS[key];
 }
 
+// Tema e tamanho do texto
+export function applyLook() {
+  const r = document.documentElement;
+  r.dataset.theme = getSetting('theme') || 'escuro';
+  r.dataset.size = getSetting('text_size') || 'normal';
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', r.dataset.theme === 'preto' ? '#000000' : '#0a0a0a');
+}
+
 export async function setSetting(key, value) {
   await db.upsert('settings', { key, value }, ['key']);
   if (!cache) cache = {};

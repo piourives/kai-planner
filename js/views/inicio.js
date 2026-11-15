@@ -37,18 +37,10 @@ const VIEWS = [
   { key: 'futuro', label: 'Futuro' },
 ];
 
-// Hábitos (na Fase 6 dá pra editar nas Configurações)
-const HABITS = [
-  { key: 'treinar', name: 'Treinar',      icon: 'dumbbell', color: '#f2f2f2', auto: true },
-  { key: 'estudar', name: 'Estudar 1h30', icon: 'school',   color: '#f2f2f2' },
-  { key: 'agua',    name: 'Água 2L',      icon: 'droplet',  color: '#f2f2f2', target: 8 },
-  { key: 'dormir',  name: 'Dormir 8h',    icon: 'moon',     color: '#f2f2f2' },
-];
-const ROTINA = [
-  { key: 'mesa',   name: 'Mesa organizada' },
-  { key: 'quarto', name: 'Quarto organizado', optional: true },
-  { key: 'oracao', name: 'Rezar o Pai Nosso à noite' },
-];
+// Hábitos: vêm das Configurações (dá pra editar lá)
+const HABITS = () => getSetting('habits').filter(h => h.enabled !== false);
+const ROTINA = () => getSetting('rotina').filter(r => r.enabled !== false);
+const WHITE = '#f2f2f2';
 
 let viewIndex = Number(localStorage.getItem('kai:homeView') || 0);
 
@@ -132,8 +124,9 @@ export async function renderInicio(main) {
 
   const blocosHoje = events.filter(e => e.kind === 'estudo' && e.date === today);
   const treinoHoje = trainingPlan(1)[0];
-  const ringsHtml = HABITS.map(h => {
-    const target = h.target || 1;
+  const habits = HABITS();
+  const ringsHtml = habits.map(h => {
+    const target = h.target > 1 ? h.target : 1;
     // Treinar: marca sozinho quando o treino do dia é concluído; descanso não conta como falha
     const v = h.auto ? (treinoHoje.type === 'done' ? 1 : 0) : val(h.key);
     const pct = Math.min(v / target, 1);
@@ -143,27 +136,28 @@ export async function renderInicio(main) {
       <button class="ring" data-habit="${h.key}" ${h.auto ? 'data-go="academia" title="Marca sozinho quando você concluir o treino"' : ''}>
         <span class="circle">
           <svg class="r" viewBox="0 0 62 62"><circle cx="31" cy="31" r="27" fill="none" stroke="#262626" stroke-width="4"/>
-            <circle cx="31" cy="31" r="27" fill="none" stroke="${h.color}" stroke-width="4" stroke-linecap="round"
+            <circle cx="31" cy="31" r="27" fill="none" stroke="${WHITE}" stroke-width="4" stroke-linecap="round"
               stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/></svg>
-          <span class="ic" style="color:${pct >= 1 ? h.color : 'var(--text)'}">${icon(h.icon)}</span>
+          <span class="ic">${icon(h.icon || 'star')}</span>
         </span>
-        <span class="name">${h.name}</span>
-        ${h.target ? `<span class="small muted">${v}/${target} copos</span>` : h.auto ? `<span class="small muted">${treinoHoje.type === 'rest' ? 'descanso' : treinoHoje.type === 'done' ? `Treino ${treinoHoje.workout} ✓` : `Treino ${treinoHoje.workout} hoje`}</span>`
+        <span class="name">${esc(h.name)}</span>
+        ${target > 1 ? `<span class="small muted">${v}/${target} ${esc(h.unit || '')}</span>` : h.auto ? `<span class="small muted">${treinoHoje.type === 'rest' ? 'descanso' : treinoHoje.type === 'done' ? `Treino ${treinoHoje.workout} ✓` : `Treino ${treinoHoje.workout} hoje`}</span>`
           : h.key === 'estudar' && blocosHoje.length ? `<span class="small muted">blocos ${blocosHoje.filter(b => b.done).length}/${blocosHoje.length}</span>` : ''}
         ${h.auto ? `<span class="streak">${icon('flame')} ${s} ${s === 1 ? 'treino' : 'treinos'}</span>` : flame(s)}
       </button>
-      ${h.target ? `<span class="water-ctl"><button data-water="-1" aria-label="Tirar um copo">−</button><button data-water="1" aria-label="Mais um copo">+</button></span>` : ''}
+      ${target > 1 ? `<span class="water-ctl"><button data-count="${h.key}" data-d="-1" aria-label="Tirar um">−</button><button data-count="${h.key}" data-d="1" aria-label="Mais um">+</button></span>` : ''}
     </div>`;
   }).join('');
 
-  // Sequência da rotina: mesa + oração no mesmo dia (quarto é opcional)
-  const mesa = doneSet('mesa'), oracao = doneSet('oracao');
-  const rotinaSet = new Set([...mesa].filter(d => oracao.has(d)));
-  const rotinaHtml = ROTINA.map(r => {
+  // Sequência da rotina: todos os itens obrigatórios no mesmo dia (os opcionais não contam)
+  const rotina = ROTINA();
+  const obrig = rotina.filter(r => !r.optional).map(r => doneSet(r.key));
+  const rotinaSet = obrig.length ? new Set([...obrig[0]].filter(d => obrig.every(s => s.has(d)))) : new Set();
+  const rotinaHtml = rotina.map(r => {
     const on = val(r.key) >= 1;
     return `<div class="check-row ${on ? 'done' : ''}">
       <button class="cb ${on ? 'on' : ''}" data-habit="${r.key}" aria-label="Marcar">${icon('check')}</button>
-      <span class="t">${r.name} ${r.optional ? '<span class="tag">opcional</span>' : ''}</span>
+      <span class="t">${esc(r.name)} ${r.optional ? '<span class="tag">opcional</span>' : ''}</span>
       <span class="muted small" style="display:flex;align-items:center;gap:3px">${icon('flame', 'sm')}${streakOf(doneSet(r.key))}</span>
     </div>`;
   }).join('');
@@ -235,11 +229,12 @@ export async function renderInicio(main) {
 
       <section class="card a-habits" id="habitsCard">
         <div class="card-h"><h2>Hábitos de hoje</h2></div>
-        <div class="rings">${ringsHtml}</div>
-        <div class="rotina">
-          <div class="rh">Rotina <span class="right">${icon('flame', 'sm')} sequência: ${plural(streakOf(rotinaSet), 'dia', 'dias')}</span></div>
+        ${habits.length ? `<div class="rings" style="grid-template-columns:repeat(${Math.min(4, habits.length)},1fr)">${ringsHtml}</div>` : ''}
+        ${rotina.length ? `<div class="rotina" ${habits.length ? '' : 'style="margin:0;border:0;padding:0"'}>
+          <div class="rh">Rotina ${obrig.length ? `<span class="right">${icon('flame', 'sm')} sequência: ${plural(streakOf(rotinaSet), 'dia', 'dias')}</span>` : ''}</div>
           ${rotinaHtml}
-        </div>
+        </div>` : ''}
+        ${!habits.length && !rotina.length ? '<div class="empty">Nenhum hábito ligado. Escolha em Configurações → Hábitos.</div>' : ''}
       </section>
 
       <section class="card a-deadlines">
@@ -279,18 +274,20 @@ export async function renderInicio(main) {
 
   // ---------- Ações: hábitos ----------
   main.querySelector('#habitsCard').addEventListener('click', async e => {
-    const w = e.target.closest('[data-water]');
+    const w = e.target.closest('[data-count]');
     if (w) {
-      const v = Math.max(0, Math.min(16, val('agua') + Number(w.dataset.water)));
-      await db.upsert('habit_logs', { habit_key: 'agua', date: today, value: v }, ['habit_key', 'date']);
+      const k = w.dataset.count, h = habits.find(x => x.key === k);
+      const v = Math.max(0, Math.min((h?.target || 8) * 2, val(k) + Number(w.dataset.d)));
+      await db.upsert('habit_logs', { habit_key: k, date: today, value: v }, ['habit_key', 'date']);
       return reload();
     }
     if (e.target.closest('[data-go]')) { location.hash = '#/academia'; return; }
     const h = e.target.closest('[data-habit]');
     if (!h || h.disabled) return;
     const key = h.dataset.habit;
+    const hb = habits.find(x => x.key === key);
     let v;
-    if (key === 'agua') v = Math.min(16, val('agua') + 1);
+    if (hb?.target > 1) v = Math.min(hb.target * 2, val(key) + 1);
     else v = val(key) >= 1 ? 0 : 1;
     await db.upsert('habit_logs', { habit_key: key, date: today, value: v }, ['habit_key', 'date']);
     reload();

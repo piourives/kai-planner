@@ -8,11 +8,10 @@ import { icon } from './icons.js';
 import { esc } from './util.js';
 import { renderInicio } from './views/inicio.js';
 import { renderConfig } from './views/config.js';
-import { renderSoon } from './views/soon.js';
 import { renderEscola } from './views/escola.js';
 import { renderCalendario } from './views/calendario.js';
 import { renderFuturo } from './views/futuro.js';
-import { loadSettings } from './settings.js';
+import { loadSettings, applyLook } from './settings.js';
 import { renderAcademia } from './views/academia.js';
 import { loadTraining } from './training.js';
 
@@ -169,6 +168,7 @@ async function startApp() {
   if (db.isCloud() && !db.currentUser()) { renderAuth(); return; }
   if (!db.getName()) await askName();
   await loadSettings(true);
+  applyLook();
   await loadTraining();
   renderShell();
   initSidebarState();

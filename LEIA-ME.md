@@ -132,3 +132,10 @@ porque o navegador bloqueia os módulos JavaScript fora de um servidor.)
   Quando chegarmos nos vídeos "como fazer" e nos PDFs, prefira vídeos curtos (5–15 s, até ~10 MB).
 - Projeto parado por 7 dias pode ser **pausado**. É só entrar no painel e clicar em "Restore".
   Abrir o app de vez em quando já evita isso.
+
+## Backup (faça de vez em quando!)
+
+Em **Configurações → Backup e dados → Baixar backup** o app baixa **um arquivo** (`kai-planner-backup-DATA.json`)
+com todos os seus dados. Guarde num lugar seguro (Google Drive, pendrive…).
+Para voltar: **Importar → Escolher arquivo de backup**. Isso troca todos os dados atuais pelos do arquivo.
+Os PDFs, vídeos e fotos ficam na nuvem; o backup leva a lista deles.

@@ -158,6 +158,56 @@ export async function removeFile(bucket, fullPath) {
   await supa.storage.from(bucket).remove([fullPath]);
 }
 
+// ---------- Backup ----------
+// Apaga todas as SUAS linhas de uma tabela
+export async function clearTable(table) {
+  if (supa) {
+    const { error } = await supa.from(table).delete().eq('user_id', user.id);
+    if (error) throw error;
+    return;
+  }
+  localStorage.removeItem('kai:' + table);
+}
+// Coloca várias linhas de uma vez (mantém os ids, para as ligações continuarem certas)
+export async function bulkInsert(table, rows) {
+  if (!rows.length) return;
+  if (supa) {
+    for (let i = 0; i < rows.length; i += 500) {
+      const part = rows.slice(i, i + 500).map(r => ({ ...r, user_id: user.id }));
+      const { error } = await supa.from(table).insert(part);
+      if (error) throw error;
+    }
+    return;
+  }
+  localSave(table, [...localLoad(table), ...rows]);
+}
+// Lista todos os seus arquivos de uma pasta (com subpastas): [{path, size}]
+export async function listFiles(bucket, prefix = '') {
+  if (!supa) return [];
+  const base = prefix ? `${user.id}/${prefix}` : user.id;
+  const out = [];
+  const walk = async dir => {
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supa.storage.from(bucket).list(dir, { limit: 1000, offset });
+      if (error) throw error;
+      for (const f of data) {
+        if (f.id === null) await walk(`${dir}/${f.name}`); // é uma pasta
+        else out.push({ path: `${dir}/${f.name}`, size: f.metadata?.size || 0 });
+      }
+      if (data.length < 1000) break;
+    }
+  };
+  await walk(base);
+  return out;
+}
+export async function removeFiles(bucket, paths) {
+  if (!supa) return;
+  for (let i = 0; i < paths.length; i += 100) {
+    const { error } = await supa.storage.from(bucket).remove(paths.slice(i, i + 100));
+    if (error) throw error;
+  }
+}
+
 // Cria ou atualiza a linha que tem os mesmos valores nas colunas "keys".
 export async function upsert(table, row, keys) {
   if (supa) {
