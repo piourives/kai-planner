@@ -19,7 +19,7 @@ Organizador pessoal (escola, academia, hábitos e metas). É um site simples
 | `js/db.js` | Salva e lê os dados (no Supabase ou no navegador) |
 | `js/config.js` | **Onde você cola o endereço e a chave pública do Supabase** |
 | `js/views/*.js` | Cada tela (Início, Configurações…) |
-| `supabase/fase1.sql` | Cria as tabelas e a segurança no Supabase |
+| `supabase/fase1.sql` … `fase4.sql` | Criam as tabelas e a segurança no Supabase (rode cada um uma vez, em ordem) |
 | `manifest.webmanifest` + `sw.js` | Deixam o site instalável como app |
 
 ---

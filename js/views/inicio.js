@@ -11,6 +11,7 @@ import { openStudyBlock } from '../study.js';
 import { addEventDialog } from './escola.js';
 import { plan as trainingPlan, streak as trainingStreak } from '../training.js';
 import { getSetting } from '../settings.js';
+import { fetchYearly, occurrences } from '../events.js';
 
 // Áreas e tipos de compromisso (cores por tipo no calendário)
 export const AREAS = {
@@ -55,12 +56,15 @@ export async function renderInicio(main) {
   const today = todayISO();
   const end = addDays(today, 6);
 
-  const [weekTasks, overdue, events, logs] = await Promise.all([
+  const [weekTasks, overdue, rawEvents, yearly, logs] = await Promise.all([
     db.list('tasks', { gte: { date: today }, lte: { date: end }, order: 'created_at' }),
     db.list('tasks', { lt: { date: today }, eq: { done: false }, order: 'date' }),
-    db.list('events', { gte: { date: today }, lte: { date: addDays(today, 365) }, order: 'date' }),
+    db.list('events', { gte: { date: addDays(today, -62) }, lte: { date: addDays(today, 365) }, order: 'date' }),
+    fetchYearly(),
     db.list('habit_logs', { gte: { date: addDays(today, -400) } }),
   ]);
+  // viagens aparecem em todos os dias; aniversários em todo ano
+  const events = occurrences(rawEvents, yearly, today, addDays(today, 365));
 
   const todayTasks = weekTasks.filter(t => t.date === today);
   const doneCount = todayTasks.filter(t => t.done).length;
@@ -101,7 +105,8 @@ export async function renderInicio(main) {
     </div>` : '';
 
   // ---------- Próximos prazos (só 3) ----------
-  const prazos = events.filter(e => PRAZO_KINDS.includes(e.kind)).slice(0, 3);
+  const vistos = new Set();
+  const prazos = events.filter(e => PRAZO_KINDS.includes(e.kind) && !vistos.has(e.id) && vistos.add(e.id)).slice(0, 3);
   const prazoHtml = prazos.length ? prazos.map(e => {
     const n = diffDays(today, e.date);
     const cls = n <= 1 ? 'b-red' : n <= 3 ? 'b-yellow' : 'b-green';

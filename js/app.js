@@ -10,6 +10,7 @@ import { renderInicio } from './views/inicio.js';
 import { renderConfig } from './views/config.js';
 import { renderSoon } from './views/soon.js';
 import { renderEscola } from './views/escola.js';
+import { renderCalendario } from './views/calendario.js';
 import { loadSettings } from './settings.js';
 import { renderAcademia } from './views/academia.js';
 import { loadTraining } from './training.js';
@@ -18,7 +19,7 @@ const app = document.getElementById('app');
 
 const ROUTES = {
   inicio:     { label: 'Início',     icon: 'home',     render: renderInicio },
-  calendario: { label: 'Calendário', icon: 'calendar', render: m => renderSoon(m, 'Calendário', 4) },
+  calendario: { label: 'Calendário', icon: 'calendar', render: renderCalendario },
   escola:     { label: 'Escola',     icon: 'school',   render: renderEscola },
   academia:   { label: 'Academia',   icon: 'dumbbell', render: renderAcademia },
   futuro:     { label: 'Futuro',     icon: 'star',     render: m => renderSoon(m, 'Futuro', 5) },
@@ -88,7 +89,7 @@ async function renderRoute() {
     console.error(err);
     const msg = String(err.message || err);
     const falta = /does not exist|schema cache|column/i.test(msg)
-      ? '<p class="small">Parece que falta rodar um arquivo SQL novo no Supabase (pasta <code>supabase/</code>, ex: <code>fase2.sql</code>).</p>' : '';
+      ? '<p class="small">Parece que falta rodar um arquivo SQL novo no Supabase (pasta <code>supabase/</code>, ex: <code>fase4.sql</code>).</p>' : '';
     main.innerHTML = `<div class="card"><b>Ops, algo deu errado.</b><p class="muted small">${esc(msg)}</p>${falta}</div>`;
   }
   window.scrollTo(0, 0);

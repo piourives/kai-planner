@@ -384,3 +384,63 @@ dialog form > div, dialog form > p { margin: 0; }
 .media { width: 100%; max-height: 60vh; border-radius: 10px; background: #000; object-fit: contain; }
 .card-h .right.icon-btn { margin-left: auto; }
 .tag-red { color: #f87171; border-color: rgba(239,68,68,.4); }
+
+/* ===== Fase 4: Calendário ===== */
+.cal-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.cal-head h1 { font-size: 24px; font-weight: 600; margin: 0 auto 0 0; min-width: 160px; }
+.cal-head h1 .muted { font-weight: 400; }
+.sm-btn { padding: 7px 12px; font-size: 14px; }
+.btn.full { width: 100%; margin-top: 10px; }
+.cal-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.cal-side { display: grid; gap: 16px; min-width: 0; }
+@media (max-width: 1150px) { .cal-grid { grid-template-columns: minmax(0, 1fr); } }
+.cal-card { padding: 12px; }
+.month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; touch-action: pan-y; }
+.month .wd { font-size: 12px; color: var(--muted); text-align: center; padding: 2px 0 6px; }
+.dc { min-height: 98px; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 5px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 3px; text-align: left; overflow: hidden; color: var(--text); }
+.dc:hover { border-color: #3a3a3a; }
+.dc.out { opacity: .38; }
+.dc.sel { border-color: #9a9a9a; background: var(--card-2); }
+.dc .n { font-size: 13px; font-weight: 600; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; flex-shrink: 0; }
+.dc.today .n { background: var(--accent); color: #0a0a0a; }
+.cm { font-size: 11.5px; line-height: 1.25; display: flex; align-items: center; gap: 5px; color: #d0d0d0; min-width: 0; }
+.cm > span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cm.done > span:last-child, .cm.miss > span:last-child { color: var(--muted); text-decoration: line-through; }
+.cm.more { color: var(--muted); padding-left: 12px; }
+.dots-m { display: none; }
+/* marcas por tipo: cinzas, diferentes pela forma */
+.mk { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: #f2f2f2; }
+.mk.k-prova { background: #f2f2f2; }
+.mk.k-trabalho { background: #c4c4c4; border-radius: 2px; }
+.mk.k-estudo { background: transparent; border: 1.5px solid #e0e0e0; }
+.mk.k-treino { background: #9a9a9a; }
+.mk.k-meta { background: #8a8a8a; border-radius: 1px; width: 6px; height: 6px; transform: rotate(45deg); }
+.mk.k-data { background: transparent; border: 1.5px dashed #8a8a8a; }
+.mk.k-tarefa { background: #555; width: 6px; height: 6px; }
+.mk.red { background: #ef4444 !important; border-color: #ef4444 !important; }
+.mk.more { background: none; width: auto; height: auto; font-size: 10px; line-height: 7px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin-top: 12px; }
+.legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.cal-it, #upList .item { width: 100%; background: none; border: 0; color: var(--text); text-align: left; cursor: pointer; }
+.cal-it .mk, #upList .mk { width: 9px; height: 9px; }
+.cal-it.is-done .item-title { color: var(--muted); text-decoration: line-through; }
+.cal-extra { display: grid; gap: 10px; }
+.cal-extra[hidden] { display: none; }
+.cal-card { container-type: inline-size; }
+/* calendário estreito: em vez do texto, só bolinhas */
+@container (max-width: 600px) {
+  .month { gap: 3px; }
+  .dc { min-height: 54px; padding: 4px 2px; align-items: center; }
+  .dc .cm { display: none; }
+  .dots-m { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; }
+  .dots-m .mk { width: 6px; height: 6px; }
+}
+@media (max-width: 640px) {
+  .cal-card { padding: 8px; }
+  .cal-head { gap: 4px; }
+  .cal-head h1 { font-size: 19px; min-width: 0; }
+  #calAdd span { display: none; }
+  #calAdd { padding: 9px 11px; margin-left: 4px; }
+  #calFilter button { padding: 7px 9px; font-size: 13px; }
+}
