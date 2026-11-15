@@ -2,6 +2,9 @@
 //  Tela INÍCIO — 4 blocos + agenda deslizável
 //  1. Saudação  2. Hoje (tarefas)  3. Próximos prazos  4. Hábitos
 // ============================================================
+import { checkNew } from '../achievements.js';
+import { celebrate } from '../anim.js';
+import { slats, techText } from '../fx.js';
 import * as db from '../db.js';
 import { icon } from '../icons.js';
 import { openDialog } from '../ui.js';
@@ -202,10 +205,10 @@ export async function renderInicio(main) {
     <div class="grid-home">
       <section class="a-hello hello">
         <div>
-          <h1>Fala, ${esc(name)} <span class="wave">👋</span></h1>
+          <h1>Fala, <span id="hiName">${esc(name)}</span> <span class="wave">👋</span></h1>
           <div class="date">${fmtLong(today)}</div>
         </div>
-        <div class="chip">${icon('trend')} ${esc(frase)}</div>
+        <div class="hello-r"><div class="chip">${icon('trend')} ${esc(frase)}</div><a class="chip chip-link" href="#/resumo">${icon('play')} Resumo da semana</a></div>
       </section>
 
       <section class="card a-today" id="todayCard">
@@ -242,6 +245,12 @@ export async function renderInicio(main) {
         ${prazoHtml}
       </section>
     </div>`;
+
+  slats(main.querySelector('.a-hello'));
+  checkNew(null, 'ach_told').then(f => {
+    if (f.length && main.isConnected) celebrate(f.length === 1 ? `🏅 Nova conquista: ${f[0].title}` : `🏅 ${f.length} conquistas novas!`);
+  }).catch(() => {});
+  techText(main.querySelector('#hiName'));
 
   const reload = () => renderInicio(main);
 

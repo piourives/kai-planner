@@ -27,6 +27,10 @@ export function applyLook() {
   const r = document.documentElement;
   r.dataset.theme = getSetting('theme') || 'escuro';
   r.dataset.size = getSetting('text_size') || 'normal';
+  // Animações: 'auto' segue o celular ("reduzir movimento"), 'on' sempre, 'off' nunca
+  const a = getSetting('animations') || 'auto';
+  const on = a === 'on' || (a === 'auto' && !matchMedia('(prefers-reduced-motion: reduce)').matches);
+  r.classList.toggle('anim', on);
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', r.dataset.theme === 'preto' ? '#000000' : '#0a0a0a');
 }
 

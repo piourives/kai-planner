@@ -4,9 +4,11 @@
 //    anéis enchendo
 //  - "explosão" de partículas ao marcar um check ou hábito
 //  - comemoração quando o treino é concluído
-//  Se o celular estiver com "reduzir movimento" ligado, nada disso roda.
+//  No modo "Automático", se o celular estiver com "reduzir movimento"
+//  ligado, nada disso roda (dá pra forçar "Ligadas" nas Configurações).
 // ============================================================
-const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Liga/desliga em Configurações → Perfil e tema → Animações
+const reduce = () => !document.documentElement.classList.contains('anim');
 const rnd = (a, b) => a + Math.random() * (b - a);
 const GRAYS = ['#ffffff', '#ededed', '#c8c8c8', '#9a9a9a', '#6e6e6e'];
 
@@ -24,6 +26,7 @@ export function enter(main) {
     el.style.setProperty('--d', `${Math.min(i++, 14) * 45}ms`);
   });
   countUp(main);
+  main.querySelectorAll('.page-title, .sec-t, .cal-head h1').forEach(scramble);
   clearTimeout(main._t);
   main._t = setTimeout(() => {
     main.classList.remove('entering');
@@ -33,7 +36,7 @@ export function enter(main) {
 
 // Números grandes contam do zero até o valor
 function countUp(root) {
-  root.querySelectorAll('.cd b, .stat b, .money b, .counter').forEach(el => {
+  root.querySelectorAll('.stat b, .money b, .counter, .ach-hero .ring-big b').forEach(el => {
     const txt = el.textContent.trim();
     const m = txt.match(/^(\d+)(\/\d+)?$/);
     if (!m || Number(m[1]) === 0) return;
@@ -117,6 +120,43 @@ export function initClickFx() {
     const r = b.getBoundingClientRect();
     burst(r.left + r.width / 2, r.top + r.height / 2, b.classList.contains('ring') ? 18 : 12);
   }, true);
+}
+
+// ---------- Texto embaralhando (estilo hacker) ----------
+const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&*+=<>/';
+export function scramble(el) {
+  if (reduce() || !el) return;
+  const node = [...el.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+  if (!node) return;
+  const text = node.textContent, t0 = performance.now(), dur = 380 + text.length * 35;
+  const step = now => {
+    if (!el.isConnected) return;
+    const p = Math.min(1, (now - t0) / dur), fixed = Math.floor(p * text.length);
+    node.textContent = [...text].map((ch, i) => (i < fixed || ch === ' ' ? ch : GLYPHS[(Math.random() * GLYPHS.length) | 0])).join('');
+    if (p < 1) requestAnimationFrame(step); else node.textContent = text;
+  };
+  requestAnimationFrame(step);
+  setTimeout(() => { if (node.isConnected) node.textContent = text; }, dur + 400); // garantia
+}
+
+// ---------- Luz que segue o dedo / mouse ----------
+export function initSpotlight() {
+  const SEL = '.card, .gcard, .icard, .medal, .dc, .hold';
+  let last = null;
+  const move = e => {
+    if (reduce()) return;
+    const el = e.target.closest?.(SEL);
+    if (last && last !== el) last.classList.remove('lit');
+    if (!el) { last = null; return; }
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    el.style.setProperty('--my', `${e.clientY - r.top}px`);
+    el.classList.add('lit');
+    last = el;
+  };
+  document.addEventListener('pointermove', move, { passive: true });
+  document.addEventListener('pointerdown', move, { passive: true });
+  document.documentElement.addEventListener('pointerleave', () => last?.classList.remove('lit'));
 }
 
 // Desliza um elemento (ex: troca de mês no calendário)

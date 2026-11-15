@@ -5,6 +5,7 @@
 //  - Mapa dos sonhos: mural com as fotos; clicou, vai pra meta
 //  - Página de cada meta: marcos, ideias, itens (foto + preço)
 // ============================================================
+import { slats, techText, carousel, holdButton, bindHold, holdConfirm, stars, flipNumber } from '../fx.js';
 import * as db from '../db.js';
 import { icon } from '../icons.js';
 import { openDialog } from '../ui.js';
@@ -218,7 +219,7 @@ export async function renderFuturo(main, ctx, params = []) {
   ].filter(p => goals.some(g => g.id === p.goal));
 
   main.innerHTML = `
-    <div class="page-head"><h1 class="page-title">Futuro</h1>
+    <div class="page-head"><h1 class="page-title" id="futTitle">Futuro</h1>
       <button class="btn" id="newGoal">${icon('plus')} Nova meta</button></div>
     ${countHtml}
     <h2 class="sec-t">Metas de 3 anos</h2>
@@ -227,10 +228,16 @@ export async function renderFuturo(main, ctx, params = []) {
     <div class="ggrid">${sonhos.map(card).join('') || '<div class="empty">Nenhum sonho ainda.</div>'}</div>
     <div class="sec-row"><h2 class="sec-t">Mapa dos sonhos</h2>
       <button class="btn ghost sm-btn" id="addPic">${icon('image')} Adicionar foto</button></div>
+    ${pics.length >= 3 ? '<div id="car" class="car-host"></div>' : ''}
     ${pics.length ? `<div class="mural">${pics.map(p => `
       <a class="mtile ph-wrap" href="#/futuro/m/${p.goal}"><img data-img="${esc(p.path)}" alt="${esc(p.cap)}" loading="lazy"><span>${esc(p.cap)}</span></a>`).join('')}</div>`
       : `<div class="card empty" style="text-align:center">Seu mural ainda está vazio. Adicione fotos das suas metas e sonhos — cada foto leva para a meta dela.</div>`}
   `;
+  stars(main);
+  main.querySelectorAll('.cd b').forEach(flipNumber);
+  techText(main.querySelector('#futTitle'));
+  main.querySelectorAll('.count').forEach(slats);
+  carousel(main.querySelector('#car'), pics.map(p => ({ path: p.path, cap: p.cap, href: `#/futuro/m/${p.goal}` })));
   fillImages(main);
 
   const reload = () => renderFuturo(main, ctx, params);
@@ -391,8 +398,9 @@ async function renderGoal(main, id) {
     ${showItems ? itemsHtml : ''}
     ${fotosHtml}
     ${extras.length ? `<div class="row-btns" style="margin-top:4px">${extras.join('')}</div>` : ''}
-    <div style="margin-top:18px"><button class="btn ghost sm-btn" id="toggleDone">${g.done ? 'Desmarcar conquista' : `${icon('check')} Marcar como conquistada`}</button></div>
+    <div style="margin-top:18px">${g.done ? '<button class="btn ghost sm-btn" id="toggleDone">Desmarcar conquista</button>' : holdButton('Segure para marcar como conquistada ⭐', '', 'holdDone')}</div>
   `;
+  stars(main);
   fillImages(main);
 
   // Capa
@@ -409,11 +417,12 @@ async function renderGoal(main, id) {
   };
   main.querySelector('#editGoal').onclick = () => goalDialog(g, reload);
   main.querySelector('#editMoney')?.addEventListener('click', () => moneyDialog(g, reload));
-  main.querySelector('#toggleDone').onclick = async () => {
-    await db.update('goals', g.id, { done: !g.done });
-    if (!g.done) celebrate('Conquista desbloqueada! ⭐');
-    reload();
-  };
+  main.querySelector('#toggleDone')?.addEventListener('click', async () => { await db.update('goals', g.id, { done: false }); reload(); });
+  bindHold(main.querySelector('#holdDone'), async () => {
+    await db.update('goals', g.id, { done: true });
+    celebrate('Conquista desbloqueada! ⭐');
+    setTimeout(reload, 600);
+  }, 1200);
 
   // Marcos e ideias
   main.querySelectorAll('form[data-add]').forEach(f => f.onsubmit = async e => {
@@ -494,7 +503,8 @@ function goalDialog(g, after) {
       }
     },
     onDanger: async () => {
-      if (!confirm(`Apagar "${g.title}" com todos os marcos, itens e fotos? Não dá pra desfazer.`)) return;
+      const ok = await holdConfirm({ title: `Apagar "${esc(g.title)}"?`, text: 'Apaga a meta com todos os marcos, itens e fotos. Não dá pra desfazer.', label: 'Segure para apagar' });
+      if (!ok) return;
       const its = await db.list('goal_items', { eq: { goal_id: g.id } });
       for (const i of its) { await deleteImage(i.image_path); await db.remove('goal_items', i.id); }
       await deleteImage(g.image_path);

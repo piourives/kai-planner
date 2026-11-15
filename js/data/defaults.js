@@ -190,4 +190,5 @@ export const DEFAULTS = {
   rotina: ROTINA,
   theme: 'escuro',
   text_size: 'normal',
+  animations: 'auto',
 };

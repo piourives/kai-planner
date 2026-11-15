@@ -3,6 +3,7 @@
 //  Monta a barra do topo, a barra lateral, o login e troca
 //  de tela conforme o endereço (#/inicio, #/escola, ...).
 // ============================================================
+import { electric } from './fx.js';
 import * as db from './db.js';
 import { icon } from './icons.js';
 import { esc } from './util.js';
@@ -14,7 +15,9 @@ import { renderFuturo } from './views/futuro.js';
 import { loadSettings, applyLook } from './settings.js';
 import { renderAcademia } from './views/academia.js';
 import { loadTraining } from './training.js';
-import { enter, initClickFx } from './anim.js';
+import { enter, initClickFx, initSpotlight } from './anim.js';
+import { renderConquistas } from './views/conquistas.js';
+import { renderResumo } from './views/resumo.js';
 
 const app = document.getElementById('app');
 
@@ -24,9 +27,11 @@ const ROUTES = {
   escola:     { label: 'Escola',     icon: 'school',   render: renderEscola },
   academia:   { label: 'Academia',   icon: 'dumbbell', render: renderAcademia },
   futuro:     { label: 'Futuro',     icon: 'star',     render: renderFuturo },
+  conquistas: { label: 'Conquistas', icon: 'medal',    render: renderConquistas },
+  resumo:     { label: 'Resumo da semana', icon: 'play', render: renderResumo },
   config:     { label: 'Configurações', icon: 'settings', render: renderConfig },
 };
-const MAIN_NAV = ['inicio', 'calendario', 'escola', 'academia', 'futuro'];
+const MAIN_NAV = ['inicio', 'calendario', 'escola', 'academia', 'futuro', 'conquistas'];
 
 // "#/escola/p/123" -> rota "escola", parâmetros ["p", "123"]
 function currentRoute() {
@@ -114,7 +119,8 @@ function renderAuth(notice = '') {
   const draw = () => {
     app.innerHTML = `
       <div class="auth-wrap"><div class="card auth">
-        <h1>${icon('calendar')} KAI Planner</h1>
+        <div class="auth-logo">${electric('calendar', 92)}</div>
+        <h1>KAI Planner</h1>
         <p class="muted small">${mode === 'login' ? 'Entre com seu e-mail e senha.' : 'Crie sua conta (só precisa fazer uma vez).'}</p>
         <form id="authForm">
           <input class="input" type="email" name="email" placeholder="E-mail" autocomplete="email" required>
@@ -178,7 +184,7 @@ function askName() {
 
 // ---------- Início do app ----------
 async function startApp() {
-  if (db.isCloud() && !db.currentUser()) { renderAuth(); return; }
+  if (db.isCloud() && !db.currentUser()) { applyLook(); renderAuth(); return; }
   if (!db.getName()) await askName();
   await loadSettings(true);
   applyLook();
@@ -189,6 +195,7 @@ async function startApp() {
 }
 
 initClickFx();
+initSpotlight();
 window.addEventListener('hashchange', () => { if (document.getElementById('main')) renderRoute(); });
 
 (async () => {
@@ -200,5 +207,14 @@ window.addEventListener('hashchange', () => { if (document.getElementById('main'
 // Service worker: só para deixar o app instalável e abrir rápido.
 // (Não usamos notificações de forma nenhuma.)
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  const hadOld = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    // ao voltar para o app, procura versão nova
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+  }).catch(() => {});
+  // chegou versão nova: recarrega uma vez para já mostrar ela
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadOld && !reloaded && !document.querySelector('dialog[open]')) { reloaded = true; location.reload(); }
+  });
 }

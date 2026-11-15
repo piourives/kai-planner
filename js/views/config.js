@@ -3,6 +3,7 @@
 //  Perfil e tema · Matérias · Horários · Estudo e média ·
 //  Treinos · Hábitos · Backup (exportar, importar, apagar)
 // ============================================================
+import { electric, holdConfirm } from '../fx.js';
 import * as db from '../db.js';
 import { icon } from '../icons.js';
 import { openDialog } from '../ui.js';
@@ -10,6 +11,8 @@ import { esc, todayISO } from '../util.js';
 import { getSetting, setSetting, loadSettings, applyLook } from '../settings.js';
 import { DEFAULTS } from '../data/defaults.js';
 import { loadTraining } from '../training.js';
+
+export const APP_VERSION = '13';
 
 const TABS = [
   ['perfil', 'Perfil e tema'], ['materias', 'Matérias'], ['horarios', 'Horários'],
@@ -54,7 +57,7 @@ export async function renderConfig(main, ctx, params = []) {
 // ============================================================
 function perfil(el, ctx) {
   const cloud = db.isCloud();
-  const theme = getSetting('theme'), size = getSetting('text_size');
+  const theme = getSetting('theme'), size = getSetting('text_size'), anim = getSetting('animations') || 'auto';
   el.innerHTML = `
     <div class="card">
       <div class="card-h"><h2>Perfil</h2></div>
@@ -75,6 +78,14 @@ function perfil(el, ctx) {
         <button data-v="normal" class="${size === 'normal' ? 'on' : ''}">Normal</button>
         <button data-v="grande" class="${size === 'grande' ? 'on' : ''}">Grande</button>
       </div>
+      <div class="small muted" style="margin:14px 0 6px">Animações</div>
+      <div class="seg" id="anim" style="margin-bottom:6px">
+        <button data-v="auto" class="${anim === 'auto' ? 'on' : ''}">Automático</button>
+        <button data-v="on" class="${anim === 'on' ? 'on' : ''}">Ligadas</button>
+        <button data-v="off" class="${anim === 'off' ? 'on' : ''}">Desligadas</button>
+      </div>
+      <p class="small muted" style="margin:0">Automático = segue o celular. Se o celular estiver com “remover animações” ou economia de bateria, elas ficam desligadas — escolha “Ligadas” para forçar.
+        Agora: <b id="animNow">${document.documentElement.classList.contains('anim') ? 'ligadas' : 'desligadas'}</b>.</p>
     </div>
     <div class="card">
       <div class="card-h"><h2>Onde seus dados ficam</h2></div>
@@ -87,7 +98,8 @@ function perfil(el, ctx) {
     <div class="card">
       <div class="card-h"><h2>Sem notificações</h2></div>
       <p class="muted small" style="margin:0">O KAI Planner nunca avisa nada sozinho: sem notificações, lembretes, sons ou vibração. Ele só mostra as coisas quando você abre.</p>
-    </div>`;
+    </div>
+    <div class="ver">${electric('calendar', 34)}<span class="small muted">KAI Planner · versão ${APP_VERSION}</span></div>`;
 
   el.querySelector('#nameForm').onsubmit = async e => {
     e.preventDefault();
@@ -102,7 +114,12 @@ function perfil(el, ctx) {
     applyLook();
     el.querySelectorAll(`${id} button`).forEach(x => x.classList.toggle('on', x === b));
   };
-  pick('#theme', 'theme'); pick('#size', 'text_size');
+  pick('#theme', 'theme'); pick('#size', 'text_size'); pick('#anim', 'animations');
+  el.querySelector('#anim').addEventListener('click', () => setTimeout(() => {
+    const on = document.documentElement.classList.contains('anim');
+    el.querySelector('#animNow').textContent = on ? 'ligadas' : 'desligadas';
+    if (on) { const r = el.querySelector('#anim .on').getBoundingClientRect(); import('../anim.js').then(a => a.burst(r.left + r.width / 2, r.top + r.height / 2, 16)); }
+  }, 50));
   const lo = el.querySelector('#logout');
   if (lo) lo.onclick = async () => { await db.signOut(); location.hash = '#/inicio'; location.reload(); };
 }
@@ -587,25 +604,21 @@ async function backup(el, ctx) {
     });
   };
 
-  el.querySelector('#wipe').onclick = () => {
-    const d = openDialog({
+  el.querySelector('#wipe').onclick = async () => {
+    const ok = await holdConfirm({
       title: 'Apagar todos os dados?',
-      body: `<p class="muted" style="margin:0">Isso apaga tudo do app${cloud ? ', inclusive PDFs, vídeos e fotos' : ''}. Não dá pra desfazer.</p>
-        <label>Para confirmar, escreva <b>APAGAR</b><input class="input" name="c" autocomplete="off" required></label>`,
-      submitLabel: 'Apagar tudo',
-      onSubmit: async fd => {
-        if (fd.get('c').trim().toUpperCase() !== 'APAGAR') { alert('Escreva APAGAR para confirmar.'); return false; }
-        try {
-          for (const t of [...TABLES].reverse()) { try { await db.clearTable(t); } catch { /* ok */ } }
-          if (cloud) for (const b of BUCKETS) { try { await db.removeFiles(b, (await db.listFiles(b)).map(x => x.path)); } catch { /* ok */ } }
-          ['kai:homeView', 'kai:calFilter'].forEach(k => { try { localStorage.removeItem(k); } catch { /* ok */ } });
-          await loadSettings(true); applyLook(); await loadTraining();
-          location.hash = '#/inicio';
-          ctx.refreshShell();
-        } catch (err) { alert('Não consegui apagar tudo: ' + err.message); }
-      },
+      text: `Isso apaga tudo do app${cloud ? ', inclusive PDFs, vídeos e fotos' : ''}. Não dá pra desfazer. Dica: baixe um backup antes.`,
+      label: 'Segure 2 segundos para apagar tudo', ms: 2000,
     });
-    d.querySelector('.btn[type=submit]').classList.add('danger');
+    if (!ok) return;
+    try {
+      for (const t of [...TABLES].reverse()) { try { await db.clearTable(t); } catch { /* ok */ } }
+      if (cloud) for (const b of BUCKETS) { try { await db.removeFiles(b, (await db.listFiles(b)).map(x => x.path)); } catch { /* ok */ } }
+      ['kai:homeView', 'kai:calFilter'].forEach(k => { try { localStorage.removeItem(k); } catch { /* ok */ } });
+      await loadSettings(true); applyLook(); await loadTraining();
+      location.hash = '#/inicio';
+      ctx.refreshShell();
+    } catch (err) { alert('Não consegui apagar tudo: ' + err.message); }
   };
 
   if (cloud) {
