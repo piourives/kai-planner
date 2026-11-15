@@ -79,7 +79,7 @@ function renderShell() {
   });
 }
 
-async function renderRoute() {
+async function renderRoute(retried = false) {
   const { key, params } = currentRoute();
   document.querySelectorAll('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.route === key));
   const main = document.getElementById('main');
@@ -88,6 +88,13 @@ async function renderRoute() {
   } catch (err) {
     console.error(err);
     const msg = String(err.message || err);
+    // Login vencido: renova e tenta de novo; se não der, pede pra entrar outra vez
+    if (/jwt/i.test(msg) && !retried) {
+      if (await db.refreshSession().catch(() => false)) return renderRoute(true);
+      await db.signOut().catch(() => {});
+      renderAuth('Seu login venceu. Entre de novo, por favor.');
+      return;
+    }
     const falta = /does not exist|schema cache|column/i.test(msg)
       ? '<p class="small">Parece que falta rodar um arquivo SQL novo no Supabase (pasta <code>supabase/</code>, ex: <code>fase5.sql</code>).</p>' : '';
     main.innerHTML = `<div class="card"><b>Ops, algo deu errado.</b><p class="muted small">${esc(msg)}</p>${falta}</div>`;
@@ -96,7 +103,7 @@ async function renderRoute() {
 }
 
 // ---------- Login ----------
-function renderAuth() {
+function renderAuth(notice = '') {
   let mode = 'login';
   const draw = () => {
     app.innerHTML = `
@@ -108,7 +115,7 @@ function renderAuth() {
           <input class="input" type="password" name="password" placeholder="Senha (mín. 6 caracteres)"
             autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}" minlength="6" required>
           <button class="btn" type="submit">${mode === 'login' ? 'Entrar' : 'Criar conta'}</button>
-          <div class="msg" id="authMsg"></div>
+          <div class="msg" id="authMsg">${esc(notice)}</div>
         </form>
         <button class="linkbtn" id="switchMode">${mode === 'login' ? 'Não tenho conta — criar' : 'Já tenho conta — entrar'}</button>
       </div></div>`;

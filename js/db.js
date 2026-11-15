@@ -25,6 +25,19 @@ export async function initDB() {
   const { data } = await supa.auth.getSession();
   user = data.session?.user ?? null;
   supa.auth.onAuthStateChange((_evt, session) => { user = session?.user ?? null; });
+  // Quando você volta para o app (ex: depois do computador hibernar),
+  // confere o login e renova se tiver vencido.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') supa.auth.getSession().catch(() => {});
+  });
+}
+
+// Renova o login (a "chave" do Supabase vence de tempos em tempos)
+export async function refreshSession() {
+  if (!supa) return false;
+  const { data, error } = await supa.auth.refreshSession();
+  user = data?.session?.user ?? null;
+  return !error && !!data?.session;
 }
 
 // ---------- Login ----------
