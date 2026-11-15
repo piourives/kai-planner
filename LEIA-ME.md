@@ -19,7 +19,7 @@ Organizador pessoal (escola, academia, hábitos e metas). É um site simples
 | `js/db.js` | Salva e lê os dados (no Supabase ou no navegador) |
 | `js/config.js` | **Onde você cola o endereço e a chave pública do Supabase** |
 | `js/views/*.js` | Cada tela (Início, Configurações…) |
-| `supabase/fase1.sql` … `fase4.sql` | Criam as tabelas e a segurança no Supabase (rode cada um uma vez, em ordem) |
+| `supabase/fase1.sql` … `fase5.sql` | Criam as tabelas e a segurança no Supabase (rode cada um uma vez, em ordem) |
 | `manifest.webmanifest` + `sw.js` | Deixam o site instalável como app |
 
 ---
@@ -128,6 +128,7 @@ porque o navegador bloqueia os módulos JavaScript fora de um servidor.)
 
 - Banco de dados: 500 MB. Texto ocupa muito pouco, então é bastante.
 - Armazenamento de arquivos: **1 GB** no total, e **50 MB por arquivo**.
+- Fotos das metas e sonhos (pasta `sonhos`): até **10 MB** cada, e o app diminui antes de enviar (fica uns 200–400 KB). Dá pra guardar milhares.
   Quando chegarmos nos vídeos "como fazer" e nos PDFs, prefira vídeos curtos (5–15 s, até ~10 MB).
 - Projeto parado por 7 dias pode ser **pausado**. É só entrar no painel e clicar em "Restore".
   Abrir o app de vez em quando já evita isso.

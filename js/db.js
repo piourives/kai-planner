@@ -144,6 +144,15 @@ export async function fileUrl(bucket, fullPath) {
   if (error) throw error;
   return data.signedUrl;
 }
+// Vários links de uma vez (para o mural de fotos)
+export async function fileUrls(bucket, paths) {
+  if (!paths.length) return {};
+  const { data, error } = await supa.storage.from(bucket).createSignedUrls(paths, 3600);
+  if (error) throw error;
+  const out = {};
+  data.forEach(d => { if (d.signedUrl) out[d.path] = d.signedUrl; });
+  return out;
+}
 export async function removeFile(bucket, fullPath) {
   if (!supa) return;
   await supa.storage.from(bucket).remove([fullPath]);
