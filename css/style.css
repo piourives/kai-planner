@@ -548,3 +548,98 @@ input[type=color].color { width: 36px; height: 36px; padding: 2px; border: 1px s
   .busy-row .grow { flex-basis: 100%; }
   .h-row .grow { flex-basis: calc(100% - 110px); }
 }
+
+/* ===== Cabe em qualquer celular (320px pra cima) ===== */
+.stack { grid-template-columns: minmax(0, 1fr); }
+.week { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.wc { width: min(36px, 100%); height: auto; aspect-ratio: 1; }
+.card-h .right { max-width: 100%; min-width: 0; }
+.tabs-mini { overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.tabs-mini::-webkit-scrollbar, .seg::-webkit-scrollbar { display: none; }
+.seg { scrollbar-width: none; }
+.ring { min-width: 0; }
+.ring .name { overflow-wrap: anywhere; }
+@media (max-width: 400px) {
+  main { padding: 12px; }
+  .card { padding: 14px; }
+  .rings { gap: 4px; }
+  .ring { padding: 2px; }
+  .ring .circle { width: 52px; height: 52px; }
+  .ring .name { font-size: 12px; }
+  .tabs-mini button { padding: 4px 6px; }
+  .page-title { font-size: 22px; }
+  .cd b { font-size: 32px; }
+  .cd { gap: 12px; }
+  .hello h1 { font-size: 22px; }
+}
+@media (max-width: 340px) {
+  .dc .n { width: 20px; height: 20px; font-size: 12px; }
+  .month .wd { font-size: 11px; }
+}
+
+/* ===== Animações ===== */
+#fx { position: fixed; inset: 0; pointer-events: none; z-index: 1000; overflow: hidden; }
+.fx-p { position: fixed; border-radius: 50%; will-change: transform, opacity; }
+.fx-star { border-radius: 1px; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); transform-origin: center; }
+.fx-ring { position: fixed; width: 46px; height: 46px; border-radius: 50%; border: 2px solid #f2f2f2; }
+.fx-toast { position: fixed; left: 50%; top: 45%; background: #f2f2f2; color: #0a0a0a; font-weight: 700; font-size: 20px;
+  padding: 14px 22px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.6); white-space: nowrap; }
+
+/* barra fininha de "carregando" embaixo do topo */
+.topbar { position: sticky; }
+.topbar::after { content: ''; position: absolute; left: 0; bottom: -1px; height: 2px; width: 30%; background: linear-gradient(90deg, transparent, #f2f2f2, transparent); opacity: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  body.busy .topbar::after { opacity: 1; animation: loadbar 1s ease-in-out infinite; }
+  @keyframes loadbar { from { transform: translateX(-100%); } to { transform: translateX(430%); } }
+
+  /* entrada das telas: cartões sobem em cascata */
+  .pop { animation: popIn .55s cubic-bezier(.2, .8, .2, 1) both; animation-delay: var(--d, 0ms); }
+  @keyframes popIn { from { opacity: 0; transform: translateY(16px) scale(.985); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+
+  /* barras e anéis enchem */
+  main.entering .pbar > span { animation: grow 1.1s cubic-bezier(.2, .8, .2, 1) .25s both; transform-origin: left; }
+  @keyframes grow { from { transform: scaleX(0); } }
+  main.entering .ring svg.r circle + circle { animation: ringFill 1.2s cubic-bezier(.2, .8, .2, 1) .2s both; }
+  @keyframes ringFill { from { stroke-dashoffset: var(--c); } }
+  .ring.full .circle { animation: none; }
+  main.entering .ring.full .circle { animation: ringPop .5s cubic-bezier(.3, 1.6, .5, 1) 1.2s both; }
+  @keyframes ringPop { 50% { transform: scale(1.12); } }
+
+  /* mãozinha acenando */
+  main.entering .wave { display: inline-block; animation: wave 1.6s ease-in-out .4s both; transform-origin: 70% 80%; }
+  @keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(16deg); } 20% { transform: rotate(-8deg); } 40% { transform: rotate(-4deg); } 50% { transform: rotate(10deg); } }
+
+  /* foguinho da sequência respirando */
+  .streak svg { animation: flicker 2.4s ease-in-out infinite; transform-origin: 50% 90%; }
+  @keyframes flicker { 0%, 100% { transform: scale(1) rotate(0); } 30% { transform: scale(1.12) rotate(-4deg); } 60% { transform: scale(.96) rotate(3deg); } }
+
+  /* toques e passadas de mouse */
+  .btn, .icon-btn, .cb, .ring, .gcard, .icard, .mtile, .dc, .nav-item, .seg a, .seg button { transition: transform .18s cubic-bezier(.3, 1.4, .5, 1), background-color .2s, border-color .2s, color .2s, opacity .2s; }
+  .btn:active, .icon-btn:active, .cb:active, .ring:active, .dc:active, .seg button:active { transform: scale(.94); }
+  .cb.on svg { animation: checkIn .35s cubic-bezier(.3, 1.6, .5, 1); }
+  @keyframes checkIn { from { transform: scale(.3) rotate(-25deg); } }
+  .check-row.done .t { transition: color .3s; }
+  @media (hover: hover) {
+    .gcard:hover, .icard:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,.45); }
+    .mtile img { transition: transform .5s cubic-bezier(.2, .8, .2, 1); }
+    .mtile:hover img { transform: scale(1.06); }
+    .nav-item:hover svg { transform: translateX(2px); transition: transform .2s; }
+    .dc:hover { transform: translateY(-1px); }
+  }
+
+  /* janelas (diálogos) abrem crescendo */
+  dialog[open] { animation: dlgIn .28s cubic-bezier(.2, .9, .3, 1.2); }
+  dialog[open]::backdrop { animation: fadeIn .25s ease; }
+  @keyframes dlgIn { from { opacity: 0; transform: translateY(14px) scale(.96); } }
+  @keyframes fadeIn { from { opacity: 0; } }
+
+  /* barra lateral no celular desliza */
+  .sidebar { transition: transform .28s cubic-bezier(.2, .8, .2, 1), width .25s; }
+  .backdrop { animation: fadeIn .25s ease; }
+
+  /* contagem regressiva: os números brilham de leve */
+  main.entering .cd b { animation: popIn .6s cubic-bezier(.2, .8, .2, 1) both; }
+  main.entering .cd > div:nth-child(2) b { animation-delay: .1s; }
+  main.entering .cd > div:nth-child(3) b { animation-delay: .2s; }
+}

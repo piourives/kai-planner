@@ -3,6 +3,7 @@
 //  Treino de hoje (ou descanso), sequência, semana, checklist,
 //  cargas, "ver como fazer", progressão de 3 meses e regras.
 // ============================================================
+import { celebrate } from '../anim.js';
 import * as db from '../db.js';
 import { icon } from '../icons.js';
 import { openDialog } from '../ui.js';
@@ -152,6 +153,7 @@ export async function renderAcademia(main) {
       const nc = { ...checks, [key]: !checks[key] };
       const all = required.every(x => nc[x.key]);
       await saveLog({ checks: nc, done: all });
+      if (all && !log?.done) celebrate(`Treino ${wk} concluído! 💪`);
       reload();
     }
     if (act === 'swap') {

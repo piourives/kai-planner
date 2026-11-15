@@ -133,7 +133,7 @@ export async function renderInicio(main) {
     const C = 2 * Math.PI * 27;
     const s = h.auto ? trainingStreak() : streakOf(doneSet(h.key, target));
     return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-      <button class="ring" data-habit="${h.key}" ${h.auto ? 'data-go="academia" title="Marca sozinho quando você concluir o treino"' : ''}>
+      <button class="ring ${pct >= 1 ? 'full' : ''}" style="--c:${C}" data-habit="${h.key}" ${h.auto ? 'data-go="academia" title="Marca sozinho quando você concluir o treino"' : ''}>
         <span class="circle">
           <svg class="r" viewBox="0 0 62 62"><circle cx="31" cy="31" r="27" fill="none" stroke="#262626" stroke-width="4"/>
             <circle cx="31" cy="31" r="27" fill="none" stroke="${WHITE}" stroke-width="4" stroke-linecap="round"
@@ -202,7 +202,7 @@ export async function renderInicio(main) {
     <div class="grid-home">
       <section class="a-hello hello">
         <div>
-          <h1>Fala, ${esc(name)} 👋</h1>
+          <h1>Fala, ${esc(name)} <span class="wave">👋</span></h1>
           <div class="date">${fmtLong(today)}</div>
         </div>
         <div class="chip">${icon('trend')} ${esc(frase)}</div>
@@ -229,7 +229,7 @@ export async function renderInicio(main) {
 
       <section class="card a-habits" id="habitsCard">
         <div class="card-h"><h2>Hábitos de hoje</h2></div>
-        ${habits.length ? `<div class="rings" style="grid-template-columns:repeat(${Math.min(4, habits.length)},1fr)">${ringsHtml}</div>` : ''}
+        ${habits.length ? `<div class="rings" style="grid-template-columns:repeat(${Math.min(4, habits.length)},minmax(0,1fr))">${ringsHtml}</div>` : ''}
         ${rotina.length ? `<div class="rotina" ${habits.length ? '' : 'style="margin:0;border:0;padding:0"'}>
           <div class="rh">Rotina ${obrig.length ? `<span class="right">${icon('flame', 'sm')} sequência: ${plural(streakOf(rotinaSet), 'dia', 'dias')}</span>` : ''}</div>
           ${rotinaHtml}

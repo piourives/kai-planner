@@ -15,6 +15,7 @@ import { addEventDialog } from './escola.js';
 import { KINDS } from './inicio.js';
 import { plan as trainingPlan, dayStatus } from '../training.js';
 import { fetchYearly, occurrences } from '../events.js';
+import { slide } from '../anim.js';
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho',
   'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -24,6 +25,7 @@ const LEGEND = [['prova', 'Prova'], ['trabalho', 'Trabalho'], ['estudo', 'Estudo
   ['meta', 'Meta'], ['data', 'Data especial'], ['tarefa', 'Tarefa']];
 
 let month = null;     // 'AAAA-MM' que está aberto
+let slideDir = 0;     // animação ao trocar de mês
 let selected = null;  // dia clicado
 let filter = (() => { try { return localStorage.getItem('kai:calFilter') || 'tudo'; } catch { return 'tudo'; } })();
 
@@ -179,6 +181,7 @@ export async function renderCalendario(main) {
 
   const reload = () => renderCalendario(main);
   const goMonth = delta => {
+    slideDir = delta || 0;
     if (delta === 0) { month = today.slice(0, 7); selected = today; }
     else {
       const d = new Date(Y, M - 1 + delta, 1);
@@ -199,6 +202,7 @@ export async function renderCalendario(main) {
 
   // Clicar num dia
   const monthEl = main.querySelector('#month');
+  if (slideDir) { slide(monthEl, slideDir); slide(main.querySelector('.cal-head h1'), slideDir); slideDir = 0; }
   monthEl.onclick = e => {
     const c = e.target.closest('[data-day]');
     if (!c) return;

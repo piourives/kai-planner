@@ -12,6 +12,7 @@ import { esc, todayISO, addDays, diffDays, parseISO, plural } from '../util.js';
 import { getSetting, setSetting, subjName } from '../settings.js';
 import { doneList, streak, programWeek } from '../training.js';
 import { saveImage, imageUrls, deleteImage } from '../images.js';
+import { celebrate } from '../anim.js';
 
 const AREAS = {
   corpo:    { label: 'Corpo',    icon: 'dumbbell' },
@@ -408,7 +409,11 @@ async function renderGoal(main, id) {
   };
   main.querySelector('#editGoal').onclick = () => goalDialog(g, reload);
   main.querySelector('#editMoney')?.addEventListener('click', () => moneyDialog(g, reload));
-  main.querySelector('#toggleDone').onclick = async () => { await db.update('goals', g.id, { done: !g.done }); reload(); };
+  main.querySelector('#toggleDone').onclick = async () => {
+    await db.update('goals', g.id, { done: !g.done });
+    if (!g.done) celebrate('Conquista desbloqueada! ⭐');
+    reload();
+  };
 
   // Marcos e ideias
   main.querySelectorAll('form[data-add]').forEach(f => f.onsubmit = async e => {

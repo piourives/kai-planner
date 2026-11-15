@@ -14,6 +14,7 @@ import { renderFuturo } from './views/futuro.js';
 import { loadSettings, applyLook } from './settings.js';
 import { renderAcademia } from './views/academia.js';
 import { loadTraining } from './training.js';
+import { enter, initClickFx } from './anim.js';
 
 const app = document.getElementById('app');
 
@@ -83,13 +84,16 @@ async function renderRoute(retried = false) {
   const { key, params } = currentRoute();
   document.querySelectorAll('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.route === key));
   const main = document.getElementById('main');
+  const busy = setTimeout(() => document.body.classList.add('busy'), 120);
   try {
     await ROUTES[key].render(main, { refreshShell: startApp }, params);
+    enter(main);
   } catch (err) {
     console.error(err);
     const msg = String(err.message || err);
     // Login vencido: renova e tenta de novo; se não der, pede pra entrar outra vez
     if (/jwt/i.test(msg) && !retried) {
+      clearTimeout(busy); document.body.classList.remove('busy');
       if (await db.refreshSession().catch(() => false)) return renderRoute(true);
       await db.signOut().catch(() => {});
       renderAuth('Seu login venceu. Entre de novo, por favor.');
@@ -99,6 +103,8 @@ async function renderRoute(retried = false) {
       ? '<p class="small">Parece que falta rodar um arquivo SQL novo no Supabase (pasta <code>supabase/</code>, ex: <code>fase5.sql</code>).</p>' : '';
     main.innerHTML = `<div class="card"><b>Ops, algo deu errado.</b><p class="muted small">${esc(msg)}</p>${falta}</div>`;
   }
+  clearTimeout(busy);
+  document.body.classList.remove('busy');
   window.scrollTo(0, 0);
 }
 
@@ -182,6 +188,7 @@ async function startApp() {
   renderRoute();
 }
 
+initClickFx();
 window.addEventListener('hashchange', () => { if (document.getElementById('main')) renderRoute(); });
 
 (async () => {
